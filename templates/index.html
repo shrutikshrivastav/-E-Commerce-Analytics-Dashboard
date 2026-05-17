@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>E-Commerce Analytics Dashboard</title>
+
+<style>
+body {
+  background: linear-gradient(135deg, #1e1e2f, #2e2e42, #f0f0f5);
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  color: #fff;
+}
+.sidebar {
+  position: fixed; left: 0; top: 0; height: 100vh; width: 220px;
+  background: rgba(20, 20, 30, 0.8);
+  backdrop-filter: blur(16px);
+  padding: 20px;
+}
+.sidebar h2 { text-align: center; color: #fff; }
+.main {
+  margin-left: 240px; padding: 20px;
+}
+.card {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 10px 0;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  color: #f5f5f5;
+}
+.flex { display: flex; flex-wrap: wrap; gap: 12px; }
+.kpi { flex: 1; min-width: 220px; text-align: center; }
+canvas, iframe { width: 100%; border: none; }
+button, input[type=file] {
+  background: #444; color: #fff; border: none; padding: 10px; border-radius: 5px; margin: 10px 0;
+}
+button:hover { background: #666; cursor: pointer; }
+</style>
+</head>
+
+<body>
+<div class="sidebar">
+  <h2>📊 E-Commerce</h2>
+  <input type="file" id="fileInput" accept=".csv, .xlsx">
+  <button onclick="uploadFile()">Upload Dataset</button>
+  <button onclick="downloadFile()">Download Excel</button>
+</div>
+
+<div class="main">
+  <div class="flex">
+    <div class="card kpi"><h3>Total Sales</h3><p id="sales">$0</p></div>
+    <div class="card kpi"><h3>Total Profit</h3><p id="profit">$0</p></div>
+  </div>
+
+  <div class="card">
+    <h3>Monthly Revenue Trend</h3>
+    <div id="trend"></div>
+  </div>
+
+  <div class="card">
+    <h3>Category-wise Sales</h3>
+    <div id="category"></div>
+  </div>
+
+  <div class="card">
+    <h3>Top Products</h3>
+    <ul id="topProducts"></ul>
+  </div>
+
+  <div class="card">
+    <h3>Top Customers</h3>
+    <ul id="topCustomers"></ul>
+  </div>
+
+  <div class="card">
+    <h3>AI Business Insights</h3>
+    <p id="insights"></p>
+  </div>
+</div>
+
+<script src="[cdn.plot.ly](https://cdn.plot.ly/plotly-latest.min.js)"></script>
+<script>
+async function uploadFile() {
+  const fileInput = document.getElementById('fileInput')
+  if (!fileInput.files.length) { alert('Select a file first.'); return; }
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+
+  const res = await fetch('/upload', { method: 'POST', body: formData });
+  const data = await res.json();
+  if (res.ok) { alert(data.message); loadData(); }
+  else { alert(data.error); }
+}
+
+async function loadData() {
+  const res = await fetch('/data');
+  const data = await res.json();
+  if (!res.ok) { alert(data.error); return; }
+
+  document.getElementById('sales').innerText = '$' + data.total_sales.toLocaleString();
+  document.getElementById('profit').innerText = '$' + data.total_profit.toLocaleString();
+
+  const trendFig = JSON.parse(data.trend_chart);
+  Plotly.newPlot('trend', trendFig.data, trendFig.layout, { responsive: true, displayModeBar: false });
+
+  const categoryFig = JSON.parse(data.category_chart);
+  Plotly.newPlot('category', categoryFig.data, categoryFig.layout, { responsive: true, displayModeBar: false });
+
+  const topP = document.getElementById('topProducts');
+  topP.innerHTML = '';
+  Object.entries(data.top_products).forEach(([k,v]) => {
+    topP.innerHTML += `<li>${k}: $${v.toFixed(2)}</li>`;
+  });
+
+  const topC = document.getElementById('topCustomers');
+  topC.innerHTML = '';
+  Object.entries(data.top_customers).forEach(([k,v]) => {
+    topC.innerHTML += `<li>${k}: $${v.toFixed(2)}</li>`;
+  });
+
+  document.getElementById('insights').innerText = data.insights;
+}
+
+async function downloadFile() {
+  const res = await fetch('/download');
+  if (!res.ok) { alert("No data available."); return; }
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'Ecommerce_Report.xlsx';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+</script>
+</body>
+</html>
