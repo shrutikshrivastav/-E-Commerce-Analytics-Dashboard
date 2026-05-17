@@ -1,746 +1,663 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexus AI | E-Commerce Analytics</title>
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- SheetJS for Excel parsing -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Tailwind CSS (via CDN for standalone usage) -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: {
-                        dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' },
-                        brand: { 500: '#6366f1', 600: '#4f46e5' },
-                        accent: { 500: '#06b6d4' }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NexusIQ — E-Commerce Analytics</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+<style>
+/* ── Reset & Tokens ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg-0: #020817;
+  --bg-1: #0b1120;
+  --bg-2: #0f1829;
+  --bg-card: rgba(15, 23, 42, 0.72);
+  --border: rgba(148, 163, 184, 0.09);
+  --border-bright: rgba(110, 231, 183, 0.25);
+  --text-1: #e2e8f0;
+  --text-2: #94a3b8;
+  --text-3: #475569;
+  --green: #6ee7b7;
+  --green-dim: rgba(110, 231, 183, 0.12);
+  --pink: #f472b6;
+  --blue: #60a5fa;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --purple: #a78bfa;
+  --sidebar-w: 240px;
+  --navbar-h: 60px;
+  --radius: 14px;
+  --glow: 0 0 30px rgba(110,231,183,0.08);
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg-0);
+  color: var(--text-1);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
 
-        /* Glassmorphism */
-        .glass {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
+/* ── Scrollbar ─────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-0); }
+::-webkit-scrollbar-thumb { background: #1e3a5f; border-radius: 99px; }
 
-        /* Animations */
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
-        .delay-100 { animation-delay: 0.1s; }
-        .delay-200 { animation-delay: 0.2s; }
-        .delay-300 { animation-delay: 0.3s; }
+/* ── Noise texture overlay ─────────────────────────────────── */
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  opacity: 0.4;
+}
 
-        /* Loader */
-        .loader {
-            border: 3px solid rgba(255,255,255,0.1);
-            border-left-color: #6366f1;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    </style>
+/* ── Sidebar ───────────────────────────────────────────────── */
+.sidebar {
+  position: fixed; left: 0; top: 0; bottom: 0;
+  width: var(--sidebar-w); z-index: 100;
+  background: linear-gradient(180deg, #0b1526 0%, #070f1d 100%);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 0 0 24px;
+  transition: transform .3s cubic-bezier(.4,0,.2,1);
+}
+.sidebar-logo {
+  display: flex; align-items: center; gap: 10px;
+  padding: 22px 20px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-mark {
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--green), #3b82f6);
+  display: grid; place-items: center;
+  font-family: 'Space Mono', monospace; font-size: 14px; font-weight: 700; color: #0f172a;
+  flex-shrink: 0;
+  box-shadow: 0 0 20px rgba(110,231,183,0.3);
+}
+.logo-text { font-size: 17px; font-weight: 700; letter-spacing: -0.4px; }
+.logo-text span { color: var(--green); }
+.sidebar-section { font-size: 10px; font-weight: 600; color: var(--text-3); letter-spacing: 1.2px; padding: 18px 20px 6px; text-transform: uppercase; }
+.nav-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px; margin: 1px 10px;
+  border-radius: 9px; cursor: pointer; text-decoration: none;
+  font-size: 13.5px; font-weight: 500; color: var(--text-2);
+  transition: all .18s ease;
+  position: relative;
+}
+.nav-link .icon { font-size: 16px; width: 20px; text-align: center; }
+.nav-link:hover { color: var(--text-1); background: rgba(148,163,184,0.06); }
+.nav-link.active { color: var(--green); background: var(--green-dim); }
+.nav-link.active::before {
+  content: ""; position: absolute; left: -10px; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 60%; background: var(--green); border-radius: 99px;
+}
+.sidebar-footer {
+  margin-top: auto; padding: 16px 20px 0;
+  border-top: 1px solid var(--border);
+}
+.badge-pro {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: linear-gradient(135deg, rgba(110,231,183,0.15), rgba(96,165,250,0.1));
+  border: 1px solid var(--border-bright); border-radius: 20px;
+  padding: 4px 10px; font-size: 11px; font-weight: 600; color: var(--green);
+}
+
+/* ── Navbar ────────────────────────────────────────────────── */
+.navbar {
+  position: fixed; top: 0; left: var(--sidebar-w); right: 0; height: var(--navbar-h);
+  z-index: 90; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  background: rgba(7, 15, 29, 0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+.navbar-left { display: flex; align-items: center; gap: 14px; }
+.page-title { font-size: 16px; font-weight: 600; color: var(--text-1); }
+.breadcrumb { font-size: 12px; color: var(--text-3); }
+.navbar-right { display: flex; align-items: center; gap: 12px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 16px; border-radius: 9px; font-size: 13px; font-weight: 500;
+  cursor: pointer; border: none; transition: all .18s ease; font-family: inherit;
+}
+.btn-ghost { background: rgba(148,163,184,0.07); color: var(--text-2); border: 1px solid var(--border); }
+.btn-ghost:hover { background: rgba(148,163,184,0.12); color: var(--text-1); }
+.btn-primary { background: linear-gradient(135deg, #10b981, #059669); color: #fff; box-shadow: 0 4px 15px rgba(16,185,129,0.25); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(16,185,129,0.35); }
+.btn-primary:active { transform: translateY(0); }
+.btn-danger { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+.avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--green), var(--blue)); display: grid; place-items: center; font-size: 13px; font-weight: 700; color: #0f172a; }
+
+/* ── Main Content ──────────────────────────────────────────── */
+.main { margin-left: var(--sidebar-w); padding-top: var(--navbar-h); min-height: 100vh; position: relative; z-index: 1; }
+.content { padding: 28px 28px 60px; }
+
+/* ── Upload Zone ───────────────────────────────────────────── */
+#upload-section { display: flex; flex-direction: column; gap: 24px; }
+.upload-card {
+  border: 2px dashed rgba(110,231,183,0.2);
+  border-radius: var(--radius); padding: 60px 40px; text-align: center;
+  background: linear-gradient(135deg, rgba(110,231,183,0.03), rgba(96,165,250,0.03));
+  transition: all .2s ease; cursor: pointer;
+}
+.upload-card:hover, .upload-card.drag-over {
+  border-color: var(--green);
+  background: var(--green-dim);
+  transform: translateY(-2px);
+}
+.upload-icon { font-size: 52px; margin-bottom: 16px; display: block; }
+.upload-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+.upload-sub { color: var(--text-2); font-size: 14px; margin-bottom: 20px; }
+.file-types { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+.tag {
+  padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;
+  background: rgba(148,163,184,0.08); color: var(--text-2); border: 1px solid var(--border);
+  font-family: 'Space Mono', monospace;
+}
+#file-input { display: none; }
+
+/* ── Loading ───────────────────────────────────────────────── */
+#loading-overlay {
+  display: none; position: fixed; inset: 0; z-index: 999;
+  background: rgba(2,8,23,0.85); backdrop-filter: blur(8px);
+  flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+}
+#loading-overlay.active { display: flex; }
+.spinner {
+  width: 48px; height: 48px; border-radius: 50%;
+  border: 3px solid rgba(110,231,183,0.15);
+  border-top-color: var(--green);
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: var(--text-2); font-size: 14px; animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:.5} 50%{opacity:1} }
+
+/* ── Dashboard ─────────────────────────────────────────────── */
+#dashboard-section { display: none; }
+.section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.section-title { font-size: 18px; font-weight: 600; }
+.section-sub { font-size: 13px; color: var(--text-2); margin-top: 2px; }
+
+/* ── KPI Grid ──────────────────────────────────────────────── */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; margin-bottom: 28px; }
+.kpi-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px;
+  backdrop-filter: blur(20px);
+  position: relative; overflow: hidden;
+  transition: transform .2s ease, box-shadow .2s ease;
+  animation: fadeUp .4s ease both;
+}
+.kpi-card:hover { transform: translateY(-3px); box-shadow: var(--glow); }
+.kpi-card::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--kpi-color, var(--green));
+  opacity: .6;
+}
+.kpi-icon { font-size: 22px; margin-bottom: 10px; }
+.kpi-label { font-size: 11px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: .8px; margin-bottom: 4px; }
+.kpi-value { font-size: 22px; font-weight: 700; font-family: 'Space Mono', monospace; color: var(--text-1); line-height: 1.1; }
+.kpi-sub { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+.kpi-card:nth-child(1) { --kpi-color: var(--green); animation-delay: .05s; }
+.kpi-card:nth-child(2) { --kpi-color: var(--pink); animation-delay: .1s; }
+.kpi-card:nth-child(3) { --kpi-color: var(--blue); animation-delay: .15s; }
+.kpi-card:nth-child(4) { --kpi-color: var(--amber); animation-delay: .2s; }
+.kpi-card:nth-child(5) { --kpi-color: var(--purple); animation-delay: .25s; }
+.kpi-card:nth-child(6) { --kpi-color: var(--red); animation-delay: .3s; }
+.kpi-card:nth-child(7) { --kpi-color: #38bdf8; animation-delay: .35s; }
+
+/* ── Chart Grid ────────────────────────────────────────────── */
+.chart-grid { display: grid; gap: 18px; margin-bottom: 18px; }
+.grid-2 { grid-template-columns: 1fr 1fr; }
+.grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.grid-full { grid-template-columns: 1fr; }
+.grid-6040 { grid-template-columns: 3fr 2fr; }
+.glass-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); backdrop-filter: blur(20px);
+  overflow: hidden; animation: fadeUp .5s ease both;
+}
+.card-header { padding: 16px 20px 0; display: flex; align-items: center; justify-content: space-between; }
+.card-title { font-size: 13px; font-weight: 600; color: var(--text-1); }
+.card-badge { font-size: 10px; font-family: 'Space Mono', monospace; padding: 2px 8px; border-radius: 99px; }
+.chart-container { padding: 4px 8px 8px; }
+.chart-container .js-plotly-plot { min-height: 280px; }
+
+/* ── Tables ────────────────────────────────────────────────── */
+.table-section { padding: 16px 20px 20px; }
+.rank-table { width: 100%; border-collapse: collapse; }
+.rank-table th { font-size: 10px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: .8px; padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border); }
+.rank-table td { font-size: 13px; color: var(--text-2); padding: 9px 8px; border-bottom: 1px solid rgba(148,163,184,0.04); vertical-align: middle; }
+.rank-table tr:last-child td { border-bottom: none; }
+.rank-table tr:hover td { color: var(--text-1); background: rgba(148,163,184,0.03); }
+.rank-num { font-family: 'Space Mono', monospace; font-size: 11px; color: var(--text-3); width: 24px; }
+.bar-spark { height: 4px; border-radius: 99px; background: var(--green); opacity: .6; transition: width .6s ease; }
+.money { font-family: 'Space Mono', monospace; color: var(--green); font-size: 12px; font-weight: 700; }
+
+/* ── Insights ──────────────────────────────────────────────── */
+.insights-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.insight-card {
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+  backdrop-filter: blur(20px);
+  display: flex; gap: 12px; align-items: flex-start;
+  animation: fadeUp .4s ease both;
+  transition: transform .2s ease;
+}
+.insight-card:hover { transform: translateY(-2px); }
+.insight-card.positive { border-color: rgba(110,231,183,0.2); }
+.insight-card.warning  { border-color: rgba(251,191,36,0.2); }
+.insight-card.negative { border-color: rgba(248,113,113,0.2); }
+.insight-card.info     { border-color: rgba(96,165,250,0.2); }
+.insight-icon { font-size: 22px; flex-shrink: 0; }
+.insight-text { font-size: 13px; color: var(--text-2); line-height: 1.55; }
+
+/* ── Dataset info ──────────────────────────────────────────── */
+.meta-bar {
+  display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+  padding: 10px 18px; border-radius: 9px;
+  background: rgba(15,23,42,0.5); border: 1px solid var(--border);
+  margin-bottom: 22px; font-size: 12px; color: var(--text-2);
+}
+.meta-pill { display: flex; align-items: center; gap: 5px; }
+.meta-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+
+/* ── Error Toast ───────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  background: #1e0c0c; border: 1px solid rgba(248,113,113,0.3);
+  border-radius: 12px; padding: 14px 18px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 13px; color: var(--red);
+  transform: translateY(80px); opacity: 0;
+  transition: all .3s ease; max-width: 380px;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ── Responsive ────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .grid-2, .grid-6040 { grid-template-columns: 1fr; }
+  .grid-3 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  :root { --sidebar-w: 0px; }
+  .sidebar { transform: translateX(-240px); }
+  .sidebar.open { transform: translateX(0); --sidebar-w: 240px; }
+  .grid-3, .grid-2 { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .content { padding: 18px 14px 60px; }
+  .navbar { left: 0; }
+}
+
+/* ── Divider ────────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--border); margin: 28px 0; }
+.section-label {
+  font-size: 11px; font-weight: 600; color: var(--text-3);
+  text-transform: uppercase; letter-spacing: 1.2px;
+  display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+}
+.section-label::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+</style>
 </head>
-<body class="bg-dark-900 text-gray-200 font-sans h-screen overflow-hidden flex selection:bg-brand-500 selection:text-white">
+<body>
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-dark-800 border-r border-dark-700 flex-col hidden md:flex z-20">
-        <div class="h-16 flex items-center px-6 border-b border-dark-700">
-            <div class="w-8 h-8 bg-gradient-to-br from-brand-500 to-accent-500 rounded-lg flex items-center justify-center mr-3">
-                <i class="fa-solid fa-chart-pie text-white text-sm"></i>
-            </div>
-            <span class="text-xl font-bold tracking-tight text-white">Nexus<span class="text-brand-500">AI</span></span>
-        </div>
+<!-- ── Sidebar ────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">N</div>
+    <span class="logo-text">Nexus<span>IQ</span></span>
+  </div>
+  <div class="sidebar-section">Analytics</div>
+  <a class="nav-link active" onclick="scrollTo('overview')">
+    <span class="icon">⬛</span> Overview
+  </a>
+  <a class="nav-link" onclick="scrollTo('trends')">
+    <span class="icon">📈</span> Revenue Trends
+  </a>
+  <a class="nav-link" onclick="scrollTo('categories')">
+    <span class="icon">🧩</span> Categories
+  </a>
+  <a class="nav-link" onclick="scrollTo('products')">
+    <span class="icon">📦</span> Top Products
+  </a>
+  <a class="nav-link" onclick="scrollTo('customers')">
+    <span class="icon">👤</span> Customers
+  </a>
+  <a class="nav-link" onclick="scrollTo('regional')">
+    <span class="icon">🌍</span> Regional
+  </a>
+  <a class="nav-link" onclick="scrollTo('insights')">
+    <span class="icon">🤖</span> AI Insights
+  </a>
+  <div class="sidebar-section">System</div>
+  <a class="nav-link" href="#" onclick="resetDashboard()">
+    <span class="icon">↩</span> New Dataset
+  </a>
+  <div class="sidebar-footer">
+    <div class="badge-pro">✦ Analytics Pro</div>
+  </div>
+</aside>
 
-        <nav class="flex-1 overflow-y-auto py-4">
-            <ul class="space-y-1 px-3">
-                <li>
-                    <a href="#" class="flex items-center px-3 py-2.5 bg-brand-500/10 text-brand-500 rounded-lg group transition-all">
-                        <i class="fa-solid fa-house w-6 text-center mr-2"></i>
-                        <span class="font-medium">Dashboard</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="flex items-center px-3 py-2.5 text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-all">
-                        <i class="fa-solid fa-bag-shopping w-6 text-center mr-2"></i>
-                        <span class="font-medium">Orders</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="flex items-center px-3 py-2.5 text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-all">
-                        <i class="fa-solid fa-users w-6 text-center mr-2"></i>
-                        <span class="font-medium">Customers</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="flex items-center px-3 py-2.5 text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-all">
-                        <i class="fa-solid fa-box-open w-6 text-center mr-2"></i>
-                        <span class="font-medium">Products</span>
-                    </a>
-                </li>
-                <li class="pt-4 pb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Analytics</li>
-                <li>
-                    <a href="#" class="flex items-center px-3 py-2.5 text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-all">
-                        <i class="fa-solid fa-chart-line w-6 text-center mr-2"></i>
-                        <span class="font-medium">Trends</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="flex items-center px-3 py-2.5 text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-all">
-                        <i class="fa-solid fa-earth-americas w-6 text-center mr-2"></i>
-                        <span class="font-medium">Regions</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
+<!-- ── Navbar ─────────────────────────────────────────────── -->
+<header class="navbar">
+  <div class="navbar-left">
+    <span class="page-title" id="navbar-title">Upload Dataset</span>
+    <span class="breadcrumb" id="navbar-breadcrumb">NexusIQ / Dashboard</span>
+  </div>
+  <div class="navbar-right" id="navbar-actions">
+    <button class="btn btn-ghost" onclick="document.getElementById('file-input').click()">
+      ⬆ Upload CSV / Excel
+    </button>
+    <div class="avatar">A</div>
+  </div>
+</header>
 
-        <div class="p-4 border-t border-dark-700">
-            <button onclick="generateReport()" class="w-full glass hover:bg-dark-700 text-white py-2.5 rounded-lg transition-all flex items-center justify-center space-x-2 text-sm font-medium">
-                <i class="fa-solid fa-download"></i>
-                <span>Export Report</span>
-            </button>
-        </div>
-    </aside>
+<!-- ── Main ───────────────────────────────────────────────── -->
+<main class="main">
+<div class="content">
 
-    <!-- Main Content -->
-    <div class="flex-1 flex flex-col h-screen relative overflow-hidden">
-        <!-- Navbar -->
-        <header class="h-16 bg-dark-800/80 backdrop-blur-md border-b border-dark-700 flex items-center justify-between px-6 z-10">
-            <div class="flex items-center md:hidden">
-                <button class="text-gray-400 hover:text-white"><i class="fa-solid fa-bars text-xl"></i></button>
-            </div>
-            
-            <div class="flex items-center bg-dark-900 rounded-lg px-3 py-1.5 border border-dark-700 w-64 md:w-96 focus-within:border-brand-500 transition-colors">
-                <i class="fa-solid fa-magnifying-glass text-gray-500 mr-2"></i>
-                <input type="text" placeholder="Search analytics..." class="bg-transparent border-none outline-none text-sm text-white w-full placeholder-gray-500">
-            </div>
+  <!-- ── Upload ─────────────────────────────────────────── -->
+  <div id="upload-section">
+    <div class="upload-card" id="drop-zone"
+         onclick="document.getElementById('file-input').click()"
+         ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <span class="upload-icon">📊</span>
+      <div class="upload-title">Drop your dataset here</div>
+      <div class="upload-sub">Upload a CSV or Excel file with e-commerce order data to generate a full analytics dashboard automatically.</div>
+      <div class="file-types">
+        <span class="tag">.CSV</span>
+        <span class="tag">.XLSX</span>
+        <span class="tag">.XLS</span>
+      </div>
+      <button class="btn btn-primary" type="button">Choose File</button>
+    </div>
+    <input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="handleFile(event)" />
 
-            <div class="flex items-center space-x-4">
-                <button class="relative text-gray-400 hover:text-white transition-colors">
-                    <i class="fa-regular fa-bell text-lg"></i>
-                    <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                </button>
-                <div class="flex items-center space-x-2 pl-4 border-l border-dark-700">
-                    <img src="https://picsum.photos/seed/admin/40/40" alt="Profile" class="w-8 h-8 rounded-full border border-dark-600">
-                    <div class="hidden md:block">
-                        <p class="text-sm font-medium text-white">Admin User</p>
-                        <p class="text-xs text-gray-500">Super Admin</p>
-                    </div>
-                </div>
-            </div>
-        </header>
+    <div class="glass-card" style="padding:24px 28px;">
+      <div class="section-title" style="margin-bottom:12px">📋 Supported Column Names</div>
+      <p style="font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:14px">
+        NexusIQ auto-detects and normalises column names. The more of these that are present in your dataset, the richer the analysis:
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        <span class="tag">Order ID</span><span class="tag">Date / Order Date</span><span class="tag">Sales / Revenue</span>
+        <span class="tag">Profit</span><span class="tag">Quantity</span><span class="tag">Category</span>
+        <span class="tag">Sub-Category</span><span class="tag">Product Name</span><span class="tag">Customer Name</span>
+        <span class="tag">Region / State</span><span class="tag">City</span><span class="tag">Discount</span>
+        <span class="tag">Ship Mode</span>
+      </div>
+    </div>
+  </div>
 
-        <!-- Dashboard Content -->
-        <main class="flex-1 overflow-y-auto p-4 md:p-8 relative">
-            
-            <!-- Upload Overlay (Initial State) -->
-            <div id="uploadOverlay" class="absolute inset-0 z-50 bg-dark-900 flex flex-col items-center justify-center p-6 text-center">
-                <div class="w-full max-w-2xl glass p-10 rounded-2xl border border-dashed border-dark-600 hover:border-brand-500 transition-colors group cursor-pointer" onclick="document.getElementById('fileInput').click()">
-                    <div class="w-20 h-20 bg-dark-700 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-brand-500/20 transition-colors">
-                        <i class="fa-solid fa-cloud-arrow-up text-3xl text-brand-500"></i>
-                    </div>
-                    <h2 class="text-2xl font-bold text-white mb-2">Upload Dataset</h2>
-                    <p class="text-gray-400 mb-6">Drag & drop your Excel or CSV file here, or click to browse.<br>Supports orders, sales, and customer data.</p>
-                    <div class="flex justify-center gap-4">
-                        <button class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">Select File</button>
-                        <button onclick="loadDemoData(event)" class="bg-dark-700 hover:bg-dark-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">Use Demo Data</button>
-                    </div>
-                    <input type="file" id="fileInput" class="hidden" accept=".csv, .xlsx, .xls" onchange="handleFileUpload(event)">
-                </div>
-                <div class="mt-8 text-gray-500 text-sm">
-                    <p><i class="fa-solid fa-shield-halved mr-1"></i> Secure Local Processing • No data leaves your browser</p>
-                </div>
-            </div>
+  <!-- ── Dashboard ──────────────────────────────────────── -->
+  <div id="dashboard-section">
 
-            <!-- Dashboard View (Hidden initially) -->
-            <div id="dashboardContent" class="hidden space-y-6">
-                
-                <!-- Header -->
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
-                    <div>
-                        <h1 class="text-2xl font-bold text-white">Overview</h1>
-                        <p class="text-gray-400 text-sm">Real-time performance metrics powered by Nexus AI.</p>
-                    </div>
-                    <div class="flex space-x-2">
-                        <span class="bg-dark-700 text-gray-300 px-3 py-1 rounded text-xs font-medium">Last 30 Days</span>
-                        <span class="bg-brand-500/10 text-brand-500 border border-brand-500/20 px-3 py-1 rounded text-xs font-medium">Live Data</span>
-                    </div>
-                </div>
-
-                <!-- KPI Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <!-- Revenue -->
-                    <div class="glass p-6 rounded-xl border-l-4 border-brand-500 animate-fade-in delay-100 hover:-translate-y-1 transition-transform">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Total Revenue</p>
-                                <h3 class="text-2xl font-bold text-white mt-1" id="kpiRevenue">$0.00</h3>
-                            </div>
-                            <div class="p-2 bg-brand-500/10 rounded-lg text-brand-500"><i class="fa-solid fa-dollar-sign"></i></div>
-                        </div>
-                        <div class="flex items-center text-xs">
-                            <span class="text-green-400 flex items-center font-medium"><i class="fa-solid fa-arrow-trend-up mr-1"></i> +12.5%</span>
-                            <span class="text-gray-500 ml-2">vs last month</span>
-                        </div>
-                    </div>
-
-                    <!-- Orders -->
-                    <div class="glass p-6 rounded-xl border-l-4 border-accent-500 animate-fade-in delay-100 hover:-translate-y-1 transition-transform">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Total Orders</p>
-                                <h3 class="text-2xl font-bold text-white mt-1" id="kpiOrders">0</h3>
-                            </div>
-                            <div class="p-2 bg-accent-500/10 rounded-lg text-accent-500"><i class="fa-solid fa-cart-shopping"></i></div>
-                        </div>
-                        <div class="flex items-center text-xs">
-                            <span class="text-green-400 flex items-center font-medium"><i class="fa-solid fa-arrow-trend-up mr-1"></i> +8.2%</span>
-                            <span class="text-gray-500 ml-2">vs last month</span>
-                        </div>
-                    </div>
-
-                    <!-- Profit -->
-                    <div class="glass p-6 rounded-xl border-l-4 border-purple-500 animate-fade-in delay-200 hover:-translate-y-1 transition-transform">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Net Profit</p>
-                                <h3 class="text-2xl font-bold text-white mt-1" id="kpiProfit">$0.00</h3>
-                            </div>
-                            <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i class="fa-solid fa-wallet"></i></div>
-                        </div>
-                        <div class="flex items-center text-xs">
-                            <span class="text-red-400 flex items-center font-medium"><i class="fa-solid fa-arrow-trend-down mr-1"></i> -2.4%</span>
-                            <span class="text-gray-500 ml-2">vs last month</span>
-                        </div>
-                    </div>
-
-                    <!-- Customers -->
-                    <div class="glass p-6 rounded-xl border-l-4 border-pink-500 animate-fade-in delay-200 hover:-translate-y-1 transition-transform">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Active Customers</p>
-                                <h3 class="text-2xl font-bold text-white mt-1" id="kpiCustomers">0</h3>
-                            </div>
-                            <div class="p-2 bg-pink-500/10 rounded-lg text-pink-500"><i class="fa-solid fa-user-group"></i></div>
-                        </div>
-                        <div class="flex items-center text-xs">
-                            <span class="text-green-400 flex items-center font-medium"><i class="fa-solid fa-arrow-trend-up mr-1"></i> +5.1%</span>
-                            <span class="text-gray-500 ml-2">vs last month</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Charts Section -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Main Trend Chart -->
-                    <div class="lg:col-span-2 glass p-6 rounded-xl animate-fade-in delay-300">
-                        <div class="flex items-center justify-between mb-6">
-                            <h3 class="text-lg font-semibold text-white">Revenue & Sales Trend</h3>
-                            <div class="flex space-x-2">
-                                <button class="px-3 py-1 bg-dark-700 text-xs rounded hover:bg-brand-600 transition-colors">Monthly</button>
-                                <button class="px-3 py-1 bg-transparent border border-dark-600 text-gray-400 text-xs rounded hover:text-white">Weekly</button>
-                            </div>
-                        </div>
-                        <div class="h-72 w-full">
-                            <canvas id="revenueChart"></canvas>
-                        </div>
-                    </div>
-
-                    <!-- Category Distribution -->
-                    <div class="glass p-6 rounded-xl animate-fade-in delay-300">
-                        <h3 class="text-lg font-semibold text-white mb-6">Sales by Category</h3>
-                        <div class="h-60 w-full flex items-center justify-center">
-                            <canvas id="categoryChart"></canvas>
-                        </div>
-                        <div class="mt-6 space-y-3" id="categoryLegend">
-                            <!-- Legend items generated by JS -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Data Tables & AI Insights -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
-                    <!-- Top Products -->
-                    <div class="glass p-6 rounded-xl animate-fade-in delay-300">
-                        <h3 class="text-lg font-semibold text-white mb-4">Top Selling Products</h3>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="text-xs text-gray-500 uppercase border-b border-dark-700">
-                                        <th class="py-3 font-medium">Product Name</th>
-                                        <th class="py-3 font-medium">Category</th>
-                                        <th class="py-3 font-medium text-right">Sales</th>
-                                        <th class="py-3 font-medium text-right">Revenue</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="topProductsTable" class="text-sm text-gray-300">
-                                    <!-- Rows generated by JS -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- AI Insights -->
-                    <div class="glass p-6 rounded-xl relative overflow-hidden animate-fade-in delay-300">
-                        <div class="absolute top-0 right-0 p-4 opacity-10">
-                            <i class="fa-solid fa-robot text-8xl text-brand-500"></i>
-                        </div>
-                        <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
-                            <i class="fa-solid fa-sparkles text-brand-500 mr-2"></i> AI Insights
-                        </h3>
-                        <div id="aiInsightsContainer" class="space-y-4">
-                            <!-- AI Content generated by JS -->
-                            <div class="flex items-start p-3 bg-dark-700/50 rounded-lg border border-dark-600">
-                                <div class="mt-1 mr-3 text-brand-400"><i class="fa-solid fa-circle-info"></i></div>
-                                <div>
-                                    <p class="text-sm text-white font-medium">Analysis Ready</p>
-                                    <p class="text-xs text-gray-400 mt-1">Upload data to generate actionable business intelligence.</p>
-                                </div>
-                            </div>
-                        </div>
-                        <button onclick="regenerateAI()" class="mt-4 text-xs text-brand-400 hover:text-brand-300 flex items-center">
-                            <i class="fa-solid fa-rotate mr-1"></i> Refresh Analysis
-                        </button>
-                    </div>
-                </div>
-
-            </div>
-        </main>
+    <!-- Meta bar -->
+    <div class="meta-bar" id="meta-bar">
+      <div class="meta-pill"><div class="meta-dot"></div><span id="meta-rows">–</span> rows</div>
+      <div class="meta-pill"><div class="meta-dot" style="background:var(--blue)"></div><span id="meta-cols">–</span> columns</div>
+      <div class="meta-pill"><div class="meta-dot" style="background:var(--amber)"></div><span id="meta-file">No file</span></div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="exportExcel()">⬇ Excel Report</button>
+        <button class="btn btn-ghost" onclick="window.print()">🖨 Print</button>
+        <button class="btn btn-danger" onclick="resetDashboard()">✕ Clear</button>
+      </div>
     </div>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-6 right-6 bg-dark-800 border border-dark-600 text-white px-6 py-4 rounded-lg shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center">
-        <div id="toastIcon" class="mr-3 text-green-500"><i class="fa-solid fa-check-circle"></i></div>
-        <div id="toastMessage">Operation successful</div>
+    <!-- KPIs -->
+    <div class="section-label" id="overview">KPI Overview</div>
+    <div class="kpi-grid" id="kpi-grid"></div>
+
+    <!-- Trends -->
+    <div class="section-label" id="trends" style="margin-top:10px">Revenue & Profit Trends</div>
+    <div class="chart-grid grid-full" id="trend-grid">
+      <div class="glass-card" id="monthly-card" style="display:none">
+        <div class="card-header"><span class="card-title">Monthly Revenue Trend</span><span class="card-badge tag">Time Series</span></div>
+        <div class="chart-container" id="monthly-chart"></div>
+      </div>
     </div>
 
-    <script>
-        // --- State Management ---
-        let rawData = [];
-        let charts = {};
+    <!-- Categories -->
+    <div class="section-label" id="categories" style="margin-top:10px">Category Analysis</div>
+    <div class="chart-grid grid-2" id="cat-grid">
+      <div class="glass-card" id="cat-card" style="display:none">
+        <div class="card-header"><span class="card-title">Sales by Category</span><span class="card-badge tag">Donut</span></div>
+        <div class="chart-container" id="category-chart"></div>
+      </div>
+      <div class="glass-card" id="subcat-card" style="display:none">
+        <div class="card-header"><span class="card-title">Revenue by Sub-Category</span><span class="card-badge tag">Horizontal Bar</span></div>
+        <div class="chart-container" id="subcategory-chart"></div>
+      </div>
+    </div>
 
-        // --- Utility Functions ---
-        const formatCurrency = (num) => {
-            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
-        };
+    <!-- Profit/Loss + Scatter -->
+    <div class="chart-grid grid-2" id="profit-grid" style="margin-top:18px">
+      <div class="glass-card" id="pl-card" style="display:none">
+        <div class="card-header"><span class="card-title">Profit vs Loss</span><span class="card-badge tag">Distribution</span></div>
+        <div class="chart-container" id="profit-loss-chart"></div>
+      </div>
+      <div class="glass-card" id="scatter-card" style="display:none">
+        <div class="card-header"><span class="card-title">Sales vs Profit Correlation</span><span class="card-badge tag">Scatter</span></div>
+        <div class="chart-container" id="scatter-chart"></div>
+      </div>
+    </div>
 
-        const showToast = (msg, type = 'success') => {
-            const toast = document.getElementById('toast');
-            const icon = document.getElementById('toastIcon');
-            const msgEl = document.getElementById('toastMessage');
-            
-            msgEl.innerText = msg;
-            if(type === 'error') {
-                icon.className = 'mr-3 text-red-500';
-                icon.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
-            } else {
-                icon.className = 'mr-3 text-green-500';
-                icon.innerHTML = '<i class="fa-solid fa-check-circle"></i>';
-            }
+    <!-- Products & Customers -->
+    <div class="section-label" id="products" style="margin-top:10px">Products & Customers</div>
+    <div class="chart-grid grid-2" id="tables-grid">
+      <div class="glass-card" id="products-card" style="display:none">
+        <div class="card-header" style="padding-bottom:10px"><span class="card-title">🏆 Top Products by Revenue</span></div>
+        <div class="table-section" id="products-table"></div>
+      </div>
+      <div class="glass-card" id="customers-card" style="display:none" >
+        <div class="card-header" style="padding-bottom:10px"><span class="card-title" id="customers">👑 Top Customers</span></div>
+        <div class="table-section" id="customers-table"></div>
+      </div>
+    </div>
 
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => {
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
-        };
+    <!-- Regional -->
+    <div class="section-label" id="regional" style="margin-top:10px">Regional Performance</div>
+    <div class="chart-grid grid-full">
+      <div class="glass-card" id="regional-card" style="display:none">
+        <div class="card-header"><span class="card-title">Sales & Profit by Region</span><span class="card-badge tag">Grouped Bar</span></div>
+        <div class="chart-container" id="regional-chart"></div>
+      </div>
+    </div>
 
-        // --- Data Handling ---
-        function handleFileUpload(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+    <!-- AI Insights -->
+    <div class="section-label" id="insights" style="margin-top:10px">🤖 AI-Generated Business Insights</div>
+    <div class="insights-grid" id="insights-grid"></div>
 
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
-                    
-                    processData(jsonData);
-                } catch (error) {
-                    console.error(error);
-                    showToast("Error parsing file. Please check format.", "error");
-                }
-            };
-            reader.readAsArrayBuffer(file);
-        }
+  </div><!-- /#dashboard-section -->
+</div>
+</main>
 
-        function loadDemoData(e) {
-            e.stopPropagation();
-            // Generate dummy data
-            const categories = ['Electronics', 'Fashion', 'Home & Garden', 'Sports', 'Toys'];
-            const regions = ['North America', 'Europe', 'Asia', 'South America'];
-            const products = ['Smartphone X', 'Laptop Pro', 'Running Shoes', 'Coffee Maker', 'Winter Jacket', 'Gaming Console', 'Desk Chair'];
-            
-            const data = [];
-            const today = new Date();
-            
-            for (let i = 0; i < 500; i++) {
-                const date = new Date(today);
-                date.setDate(date.getDate() - Math.floor(Math.random() * 90));
-                
-                const price = Math.floor(Math.random() * 500) + 20;
-                const quantity = Math.floor(Math.random() * 5) + 1;
-                const cost = price * 0.6; // 40% margin
-                
-                data.push({
-                    'Order ID': `ORD-${1000 + i}`,
-                    'Date': date.toISOString().split('T')[0],
-                    'Product': products[Math.floor(Math.random() * products.length)],
-                    'Category': categories[Math.floor(Math.random() * categories.length)],
-                    'Region': regions[Math.floor(Math.random() * regions.length)],
-                    'Quantity': quantity,
-                    'Price': price,
-                    'Total Sales': price * quantity,
-                    'Cost': cost * quantity,
-                    'Profit': (price * quantity) - (cost * quantity),
-                    'Customer ID': `CUST-${Math.floor(Math.random() * 100)}`
-                });
-            }
-            // Sort by date
-            data.sort((a, b) => new Date(a['Date']) - new Date(b['Date']));
-            processData(data);
-        }
+<!-- ── Loading Overlay ────────────────────────────────────── -->
+<div id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Analysing your dataset…</div>
+</div>
 
-        // --- Analysis Engine ---
-        function processData(data) {
-            if (!data || data.length === 0) {
-                showToast("No data found in file.", "error");
-                return;
-            }
+<!-- ── Error Toast ────────────────────────────────────────── -->
+<div class="toast" id="toast">
+  <span>⚠</span><span id="toast-msg">Error</span>
+</div>
 
-            rawData = data;
-            
-            // Normalize keys
-            const sample = data[0];
-            const keyMap = {
-                sales: Object.keys(sample).find(k => k.toLowerCase().includes('sales') || k.toLowerCase().includes('revenue') || k.toLowerCase().includes('total')),
-                profit: Object.keys(sample).find(k => k.toLowerCase().includes('profit')),
-                category: Object.keys(sample).find(k => k.toLowerCase().includes('category')),
-                date: Object.keys(sample).find(k => k.toLowerCase().includes('date')),
-                product: Object.keys(sample).find(k => k.toLowerCase().includes('product')),
-                order: Object.keys(sample).find(k => k.toLowerCase().includes('order'))
-            };
+<script>
+// ─── Utilities ───────────────────────────────────────────────
+const $ = id => document.getElementById(id);
 
-            // Calculate KPIs
-            const totalRevenue = data.reduce((sum, row) => sum + (parseFloat(row[keyMap.sales]) || 0), 0);
-            const totalProfit = data.reduce((sum, row) => sum + (parseFloat(row[keyMap.profit]) || 0), 0);
-            const totalOrders = new Set(data.map(row => row[keyMap.order])).size; // Approximate unique orders
-            
-            // Animate Numbers
-            animateValue("kpiRevenue", totalRevenue, true);
-            animateValue("kpiProfit", totalProfit, true);
-            animateValue("kpiOrders", totalOrders, false);
-            // Estimate unique customers (mock logic)
-            const customers = new Set(data.map((_, i) => `CUST-${i % 50}`)).size; 
-            animateValue("kpiCustomers", customers, false);
+function fmt(n) {
+  if (Math.abs(n) >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (Math.abs(n) >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+  return '$' + n.toFixed(2);
+}
+function fmtNum(n) {
+  if (n >= 1e6) return (n/1e6).toFixed(1)+'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
+  return n.toLocaleString();
+}
+function showToast(msg) {
+  $('toast-msg').textContent = msg;
+  $('toast').classList.add('show');
+  setTimeout(() => $('toast').classList.remove('show'), 5000);
+}
+function scrollTo(id) {
+  const el = $(id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  event && event.currentTarget && event.currentTarget.classList.add('active');
+}
 
-            // Prepare Charts
-            prepareTrendChart(data, keyMap);
-            prepareCategoryChart(data, keyMap);
-            prepareTopProducts(data, keyMap);
-            generateAIInsights(data, keyMap, totalRevenue, totalProfit);
+// ─── Drag & drop ─────────────────────────────────────────────
+function onDragOver(e) { e.preventDefault(); $('drop-zone').classList.add('drag-over'); }
+function onDragLeave()  { $('drop-zone').classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault(); onDragLeave();
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+function handleFile(e) { const f = e.target.files[0]; if (f) processFile(f); }
 
-            // UI Transition
-            document.getElementById('uploadOverlay').classList.add('hidden');
-            document.getElementById('dashboardContent').classList.remove('hidden');
-            showToast("Dataset analyzed successfully");
-        }
+// ─── Upload & Render ─────────────────────────────────────────
+async function processFile(file) {
+  $('loading-overlay').classList.add('active');
+  const fd = new FormData();
+  fd.append('file', file);
+  try {
+    const res = await fetch('/upload', { method: 'POST', body: fd });
+    const json = await res.json();
+    if (!res.ok || json.error) throw new Error(json.error || 'Upload failed');
+    renderDashboard(json.data, file.name);
+  } catch(err) {
+    showToast(err.message);
+  } finally {
+    $('loading-overlay').classList.remove('active');
+  }
+}
 
-        function animateValue(id, end, isCurrency) {
-            const obj = document.getElementById(id);
-            const duration = 1500;
-            let startTimestamp = null;
-            const start = 0;
-            const step = (timestamp) => {
-                if (!startTimestamp) startTimestamp = timestamp;
-                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
-                const val = Math.floor(progress * (end - start) + start);
-                obj.innerHTML = isCurrency ? formatCurrency(val) : val.toLocaleString();
-                if (progress < 1) {
-                    window.requestAnimationFrame(step);
-                } else {
-                    obj.innerHTML = isCurrency ? formatCurrency(end) : end.toLocaleString();
-                }
-            };
-            window.requestAnimationFrame(step);
-        }
+// ─── Plotly config ────────────────────────────────────────────
+const PLOTLY_CFG = { displayModeBar: false, responsive: true };
 
-        // --- Charting Logic ---
-        function prepareTrendChart(data, keyMap) {
-            const ctx = document.getElementById('revenueChart').getContext('2d');
-            
-            // Group by Date (Month)
-            const monthlyData = {};
-            data.forEach(row => {
-                const date = new Date(row[keyMap.date]);
-                const monthKey = date.toLocaleString('default', { month: 'short' });
-                
-                if(!monthlyData[monthKey]) monthlyData[monthKey] = { revenue: 0, profit: 0 };
-                monthlyData[monthKey].revenue += parseFloat(row[keyMap.sales]) || 0;
-                monthlyData[monthKey].profit += parseFloat(row[keyMap.profit]) || 0;
-            });
+function plotChart(containerId, figJson) {
+  const el = $(containerId);
+  if (!el || !figJson) return;
+  el.style.minHeight = '290px';
+  Plotly.newPlot(containerId, figJson.data, {
+    ...figJson.layout,
+    autosize: true,
+    height: 290,
+  }, PLOTLY_CFG);
+}
 
-            const labels = Object.keys(monthlyData);
-            const revenueData = labels.map(l => monthlyData[l].revenue);
-            const profitData = labels.map(l => monthlyData[l].profit);
+// ─── Render Dashboard ─────────────────────────────────────────
+function renderDashboard(data, fileName) {
+  // Switch views
+  $('upload-section').style.display = 'none';
+  $('dashboard-section').style.display = 'block';
+  $('navbar-title').textContent = 'Analytics Dashboard';
+  $('navbar-breadcrumb').textContent = `NexusIQ / ${fileName}`;
+  $('navbar-actions').innerHTML = `
+    <button class="btn btn-ghost" onclick="exportExcel()">⬇ Excel</button>
+    <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">⬆ New Upload</button>
+    <input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="handleFile(event)" style="display:none"/>
+    <div class="avatar">A</div>
+  `;
 
-            if (charts.revenue) charts.revenue.destroy();
+  // Meta bar
+  $('meta-rows').textContent = fmtNum(data.rows);
+  $('meta-cols').textContent = data.columns.length;
+  $('meta-file').textContent = fileName;
 
-            charts.revenue = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Revenue',
-                            data: revenueData,
-                            borderColor: '#6366f1',
-                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                            borderWidth: 2,
-                            fill: true,
-                            tension: 0.4,
-                            pointRadius: 3
-                        },
-                        {
-                            label: 'Profit',
-                            data: profitData,
-                            borderColor: '#06b6d4',
-                            backgroundColor: 'transparent',
-                            borderWidth: 2,
-                            borderDash: [5, 5],
-                            tension: 0.4,
-                            pointRadius: 0
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { labels: { color: '#94a3b8' } }
-                    },
-                    scales: {
-                        y: {
-                            grid: { color: '#334155' },
-                            ticks: { color: '#94a3b8', callback: (val) => '$' + val/1000 + 'k' }
-                        },
-                        x: {
-                            grid: { display: false },
-                            ticks: { color: '#94a3b8' }
-                        }
-                    }
-                }
-            });
-        }
+  // KPIs
+  const k = data.kpis;
+  const kpis = [
+    { icon: '💰', label: 'Total Revenue',    value: fmt(k.total_sales),     sub: 'Gross sales' },
+    { icon: '📊', label: 'Total Profit',     value: fmt(k.total_profit),    sub: `${k.profit_margin.toFixed(1)}% margin` },
+    { icon: '🛒', label: 'Total Orders',     value: fmtNum(k.total_orders), sub: 'Transactions' },
+    { icon: '📦', label: 'Units Sold',       value: fmtNum(k.total_quantity),sub: 'Quantity' },
+    { icon: '🎯', label: 'Avg Order Value',  value: fmt(k.avg_order_value), sub: 'Per transaction' },
+    { icon: '👤', label: 'Unique Customers', value: fmtNum(k.unique_customers), sub: 'Distinct buyers' },
+    { icon: '📉', label: 'Profit Margin',    value: k.profit_margin.toFixed(2) + '%', sub: 'Net margin %' },
+  ];
+  $('kpi-grid').innerHTML = kpis.map(kpi => `
+    <div class="kpi-card" style="animation-delay:${Math.random()*0.2}s">
+      <div class="kpi-icon">${kpi.icon}</div>
+      <div class="kpi-label">${kpi.label}</div>
+      <div class="kpi-value">${kpi.value}</div>
+      <div class="kpi-sub">${kpi.sub}</div>
+    </div>`).join('');
 
-        function prepareCategoryChart(data, keyMap) {
-            const ctx = document.getElementById('categoryChart').getContext('2d');
-            
-            const catData = {};
-            data.forEach(row => {
-                const cat = row[keyMap.category] || 'Unknown';
-                catData[cat] = (catData[cat] || 0) + (parseFloat(row[keyMap.sales]) || 0);
-            });
+  // Charts
+  if (data.monthly_trend) { $('monthly-card').style.display=''; plotChart('monthly-chart', data.monthly_trend); }
+  if (data.category_chart) { $('cat-card').style.display=''; plotChart('category-chart', data.category_chart); }
+  if (data.subcategory_chart) { $('subcat-card').style.display=''; plotChart('subcategory-chart', data.subcategory_chart); }
+  if (data.profit_loss_chart) { $('pl-card').style.display=''; plotChart('profit-loss-chart', data.profit_loss_chart); }
+  if (data.scatter_chart) { $('scatter-card').style.display=''; plotChart('scatter-chart', data.scatter_chart); }
+  if (data.regional_chart) { $('regional-card').style.display=''; plotChart('regional-chart', data.regional_chart); }
 
-            const labels = Object.keys(catData);
-            const values = Object.values(catData);
-            const total = values.reduce((a, b) => a + b, 0);
+  // Tables
+  if (data.top_products && data.top_products.length) {
+    $('products-card').style.display = '';
+    const maxSales = Math.max(...data.top_products.map(r => r.sales));
+    $('products-table').innerHTML = `<table class="rank-table">
+      <thead><tr><th>#</th><th>Product</th><th>Revenue</th><th style="width:80px">Share</th></tr></thead>
+      <tbody>${data.top_products.map((r,i) => `
+        <tr>
+          <td class="rank-num">${i+1}</td>
+          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${r.product}">${r.product}</td>
+          <td class="money">${fmt(r.sales)}</td>
+          <td><div class="bar-spark" style="width:${(r.sales/maxSales*100).toFixed(0)}%"></div></td>
+        </tr>`).join('')}
+      </tbody></table>`;
+  }
+  if (data.top_customers && data.top_customers.length) {
+    $('customers-card').style.display = '';
+    const maxSales = Math.max(...data.top_customers.map(r => r.sales));
+    $('customers-table').innerHTML = `<table class="rank-table">
+      <thead><tr><th>#</th><th>Customer</th><th>Revenue</th><th>Orders</th></tr></thead>
+      <tbody>${data.top_customers.map((r,i) => `
+        <tr>
+          <td class="rank-num">${i+1}</td>
+          <td>${r.customer}</td>
+          <td class="money">${fmt(r.sales)}</td>
+          <td style="color:var(--text-3);font-size:12px">${r.orders}</td>
+        </tr>`).join('')}
+      </tbody></table>`;
+  }
 
-            // Update Legend HTML
-            const legendEl = document.getElementById('categoryLegend');
-            legendEl.innerHTML = '';
-            
-            const colors = ['#6366f1', '#06b6d4', '#ec4899', '#8b5cf6', '#10b981'];
+  // Insights
+  if (data.insights && data.insights.length) {
+    $('insights-grid').innerHTML = data.insights.map((ins, i) => `
+      <div class="insight-card ${ins.type}" style="animation-delay:${i*0.07}s">
+        <div class="insight-icon">${ins.icon}</div>
+        <div class="insight-text">${ins.text}</div>
+      </div>`).join('');
+  }
+}
 
-            labels.forEach((label, i) => {
-                const percentage = ((values[i]/total)*100).toFixed(1);
-                const color = colors[i % colors.length];
-                legendEl.innerHTML += `
-                    <div class="flex items-center justify-between text-sm">
-                        <div class="flex items-center">
-                            <span class="w-3 h-3 rounded-full mr-2" style="background-color: ${color}"></span>
-                            <span class="text-gray-300">${label}</span>
-                        </div>
-                        <span class="text-white font-medium">${percentage}%</span>
-                    </div>
-                `;
-            });
+// ─── Export ───────────────────────────────────────────────────
+function exportExcel() {
+  window.location.href = '/report/excel';
+}
 
-            if (charts.category) charts.category.destroy();
-
-            charts.category = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: values,
-                        backgroundColor: colors,
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '75%',
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-
-        function prepareTopProducts(data, keyMap) {
-            const prodData = {};
-            data.forEach(row => {
-                const prod = row[keyMap.product] || 'Unknown';
-                const cat = row[keyMap.category] || 'General';
-                const sales = parseFloat(row[keyMap.sales]) || 0;
-                
-                if (!prodData[prod]) prodData[prod] = { category: cat, sales: 0, count: 0 };
-                prodData[prod].sales += sales;
-                prodData[prod].count += 1;
-            });
-
-            // Sort and take top 5
-            const sorted = Object.entries(prodData)
-                .sort((a, b) => b[1].sales - a[1].sales)
-                .slice(0, 5);
-
-            const tbody = document.getElementById('topProductsTable');
-            tbody.innerHTML = '';
-
-            sorted.forEach(([name, info], index) => {
-                const tr = document.createElement('tr');
-                tr.className = "border-b border-dark-700 hover:bg-dark-700/30 transition-colors";
-                tr.innerHTML = `
-                    <td class="py-3 pl-2">
-                        <div class="flex items-center">
-                            <span class="w-6 h-6 rounded bg-dark-700 flex items-center justify-center text-xs font-bold text-gray-400 mr-3">${index + 1}</span>
-                            <span class="font-medium text-white">${name}</span>
-                        </div>
-                    </td>
-                    <td class="py-3 text-gray-400"><span class="bg-dark-700 px-2 py-0.5 rounded text-xs">${info.category}</span></td>
-                    <td class="py-3 text-right text-gray-300">${info.count}</td>
-                    <td class="py-3 text-right text-white font-medium">${formatCurrency(info.sales)}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        // --- AI Simulation Logic ---
-        function generateAIInsights(data, keyMap, totalRevenue, totalProfit) {
-            const container = document.getElementById('aiInsightsContainer');
-            const margin = ((totalProfit / totalRevenue) * 100).toFixed(1);
-            
-            // Find best category
-            const catPerf = {};
-            data.forEach(r => {
-                const c = r[keyMap.category];
-                if(!catPerf[c]) catPerf[c] = 0;
-                catPerf[c] += r[keyMap.sales];
-            });
-            const bestCat = Object.entries(catPerf).sort((a,b) => b[1] - a[1])[0][0];
-
-            const insights = [
-                {
-                    type: 'success',
-                    title: 'Strong Profit Margins',
-                    msg: `Your current profit margin is <span class="text-white font-bold">${margin}%</span>. This is above the industry average for e-commerce.`
-                },
-                {
-                    type: 'info',
-                    title: 'Category Leader',
-                    msg: `<span class="text-brand-400 font-bold">${bestCat}</span> is your top-performing category this month. Consider increasing inventory for related products.`
-                },
-                {
-                    type: 'warning',
-                    title: 'Inventory Suggestion',
-                    msg: 'AI predicts a 15% surge in demand for "Electronics" in the coming weeks based on historical trends.'
-                }
-            ];
-
-            container.innerHTML = '';
-            insights.forEach((insight, i) => {
-                let icon = 'fa-circle-info';
-                let color = 'text-brand-400';
-                
-                if (insight.type === 'success') { icon = 'fa-arrow-trend-up'; color = 'text-green-400'; }
-                if (insight.type === 'warning') { icon = 'fa-triangle-exclamation'; color = 'text-yellow-400'; }
-
-                container.innerHTML += `
-                    <div class="flex items-start p-3 bg-dark-700/50 rounded-lg border border-dark-600 animate-fade-in" style="animation-delay: ${i * 100}ms">
-                        <div class="mt-1 mr-3 ${color}"><i class="fa-solid ${icon}"></i></div>
-                        <div>
-                            <p class="text-sm text-white font-medium">${insight.title}</p>
-                            <p class="text-xs text-gray-400 mt-1">${insight.msg}</p>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-
-        function regenerateAI() {
-            if(rawData.length === 0) return;
-            // Just a visual refresh
-            const btn = document.querySelector('button[onclick="regenerateAI()"]');
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<div class="loader w-3 h-3 border-2"></div> Analyzing...';
-            
-            setTimeout(() => {
-                // Re-run logic with slight random variations to simulate "new" AI thought
-                const keyMap = {
-                    sales: Object.keys(rawData[0]).find(k => k.toLowerCase().includes('sales')),
-                    profit: Object.keys(rawData[0]).find(k => k.toLowerCase().includes('profit')),
-                    category: Object.keys(rawData[0]).find(k => k.toLowerCase().includes('category'))
-                };
-                const totalRevenue = rawData.reduce((sum, row) => sum + (parseFloat(row[keyMap.sales]) || 0), 0);
-                const totalProfit = rawData.reduce((sum, row) => sum + (parseFloat(row[keyMap.profit]) || 0), 0);
-                generateAIInsights(rawData, keyMap, totalRevenue, totalProfit);
-                btn.innerHTML = originalHtml;
-                showToast("AI insights updated");
-            }, 1000);
-        }
-
-        function generateReport() {
-            if(rawData.length === 0) {
-                showToast("No data to export", "error");
-                return;
-            }
-            // Simulate PDF generation
-            const btn = document.querySelector('button[onclick="generateReport()"]');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<div class="loader w-4 h-4 border-2"></div> Generating...';
-            
-            setTimeout(() => {
-                btn.innerHTML = originalText;
-                showToast("Report downloaded successfully (Simulated)");
-                // In a real app with backend, this would trigger a window.location or blob download
-            }, 1500);
-        }
-
-    </script>
+// ─── Reset ────────────────────────────────────────────────────
+function resetDashboard() {
+  $('dashboard-section').style.display = 'none';
+  $('upload-section').style.display = 'flex';
+  $('upload-section').style.flexDirection = 'column';
+  $('upload-section').style.gap = '24px';
+  $('navbar-title').textContent = 'Upload Dataset';
+  $('navbar-actions').innerHTML = `
+    <button class="btn btn-ghost" onclick="document.getElementById('file-input').click()">⬆ Upload CSV / Excel</button>
+    <input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="handleFile(event)" style="display:none"/>
+    <div class="avatar">A</div>
+  `;
+}
+</script>
 </body>
 </html>
