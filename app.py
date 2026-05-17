@@ -1,16 +1,16 @@
-import pandas as pd
-import numpy as np
-import plotly.graph_objs as go
-import plotly.utils
-import json
 from flask import Flask, render_template, request, jsonify
+import os
 
+# Initialize Flask
+# template_folder='.' tells Flask to look for HTML files in the current directory
 app = Flask(__name__, template_folder='.')
 
 @app.route('/')
 def dashboard():
-    # Serve the HTML file (assumes index.html is in the same root)
+    # This will now correctly find index.html in the same folder
     return render_template('index.html')
+
+# ... rest of your code remains the same ...
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
