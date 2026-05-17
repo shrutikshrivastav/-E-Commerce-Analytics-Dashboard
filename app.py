@@ -10,7 +10,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
-from flask import Flask, request, jsonify, send_file, render_template_from_string
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
