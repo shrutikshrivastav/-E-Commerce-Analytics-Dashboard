@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus AI | E-Commerce Analytics</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Tailwind CSS (via CDN for standalone usage) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        dark: { 900: '#0f172a', 800: '#1e293b', 700: '#334155' },
+                        brand: { 500: '#6366f1', 600: '#4f46e5' },
+                        accent: { 500: '#06b6d4' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Glassmorphism */
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Animations */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+
+        /* Loader */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-left-color: #6366f1;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-dark-900 text-gray-200 font-sans h-screen overflow-hidden flex selection:bg-brand-500 selection:text-white">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-dark-800 border-r border-dark-700 flex-col hidden md:flex z-20">
+        <div class="h-16 flex items-center px-6 border-b border-dark-700">
+            <div class="w-8 h-8 bg-gradient-to-br from-brand-500 to-accent-500 rounded-lg flex items-center justify-center mr-3">
+                <i class="fa-solid fa-chart-pie text-white text-sm"></i>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-white">Nexus<span class="text-brand-500">AI</span></span>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto py-4">
+            <ul class="space-y-1 px-3">
+                <li>
+                    <a href="#" class="flex items-center px-3 py-2.5 bg-brand-500/10 text-brand-500 rounded-lg group transition-all">
+                        <i class="fa-solid fa-house w-6 text-center mr-2"></i>
+                        <span class="font-medium">Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="flex items-center px-3 py-2.5 text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-all">
+                        <i class="fa-solid fa-bag-shopping w-6 text-center mr-2"></i>
+                        <span class="font-medium">Orders</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="flex items-center px-3 py-2.5 text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-all">
+                        <i class="fa-solid fa-users w-6 text-center mr-2"></i>
+                        <span class="font-medium">Customers</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="flex items-center px-3 py-2.5 text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-all">
+                        <i class="fa-solid fa-box-open w-6 text-center mr-2"></i>
+                        <span class="font-medium">Products</span>
+                    </a>
+                </li>
+                <li class="pt-4 pb-2 px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Analytics</li>
+                <li>
+                    <a href="#" class="flex items-center px-3 py-2.5 text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-all">
+                        <i class="fa-solid fa-chart-line w-6 text-center mr-2"></i>
+                        <span class="font-medium">Trends</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="flex items-center px-3 py-2.5 text-gray-400 hover:text-white hover:bg-dark-700 rounded-lg transition-all">
+                        <i class="fa-solid fa-earth-americas w-6 text-center mr-2"></i>
+                        <span class="font-medium">Regions</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <div class="p-4 border-t border-dark-700">
+            <button onclick="generateReport()" class="w-full glass hover:bg-dark-700 text-white py-2.5 rounded-lg transition-all flex items-center justify-center space-x-2 text-sm font-medium">
+                <i class="fa-solid fa-download"></i>
+                <span>Export Report</span>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col h-screen relative overflow-hidden">
+        <!-- Navbar -->
+        <header class="h-16 bg-dark-800/80 backdrop-blur-md border-b border-dark-700 flex items-center justify-between px-6 z-10">
+            <div class="flex items-center md:hidden">
+                <button class="text-gray-400 hover:text-white"><i class="fa-solid fa-bars text-xl"></i></button>
+            </div>
+            
+            <div class="flex items-center bg-dark-900 rounded-lg px-3 py-1.5 border border-dark-700 w-64 md:w-96 focus-within:border-brand-500 transition-colors">
+                <i class="fa-solid fa-magnifying-glass text-gray-500 mr-2"></i>
+                <input type="text" placeholder="Search analytics..." class="bg-transparent border-none outline-none text-sm text-white w-full placeholder-gray-500">
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <button class="relative text-gray-400 hover:text-white transition-colors">
+                    <i class="fa-regular fa-bell text-lg"></i>
+                    <span class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                </button>
+                <div class="flex items-center space-x-2 pl-4 border-l border-dark-700">
+                    <img src="https://picsum.photos/seed/admin/40/40" alt="Profile" class="w-8 h-8 rounded-full border border-dark-600">
+                    <div class="hidden md:block">
+                        <p class="text-sm font-medium text-white">Admin User</p>
+                        <p class="text-xs text-gray-500">Super Admin</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-8 relative">
+            
+            <!-- Upload Overlay (Initial State) -->
+            <div id="uploadOverlay" class="absolute inset-0 z-50 bg-dark-900 flex flex-col items-center justify-center p-6 text-center">
+                <div class="w-full max-w-2xl glass p-10 rounded-2xl border border-dashed border-dark-600 hover:border-brand-500 transition-colors group cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                    <div class="w-20 h-20 bg-dark-700 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-brand-500/20 transition-colors">
+                        <i class="fa-solid fa-cloud-arrow-up text-3xl text-brand-500"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-white mb-2">Upload Dataset</h2>
+                    <p class="text-gray-400 mb-6">Drag & drop your Excel or CSV file here, or click to browse.<br>Supports orders, sales, and customer data.</p>
+                    <div class="flex justify-center gap-4">
+                        <button class="bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">Select File</button>
+                        <button onclick="loadDemoData(event)" class="bg-dark-700 hover:bg-dark-600 text-white px-6 py-2 rounded-lg font-medium transition-colors">Use Demo Data</button>
+                    </div>
+                    <input type="file" id="fileInput" class="hidden" accept=".csv, .xlsx, .xls" onchange="handleFileUpload(event)">
+                </div>
+                <div class="mt-8 text-gray-500 text-sm">
+                    <p><i class="fa-solid fa-shield-halved mr-1"></i> Secure Local Processing • No data leaves your browser</p>
+                </div>
+            </div>
+
+            <!-- Dashboard View (Hidden initially) -->
+            <div id="dashboardContent" class="hidden space-y-6">
+                
+                <!-- Header -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Overview</h1>
+                        <p class="text-gray-400 text-sm">Real-time performance metrics powered by Nexus AI.</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <span class="bg-dark-700 text-gray-300 px-3 py-1 rounded text-xs font-medium">Last 30 Days</span>
+                        <span class="bg-brand-500/10 text-brand-500 border border-brand-500/20 px-3 py-1 rounded text-xs font-medium">Live Data</span>
+                    </div>
+                </div>
+
+                <!-- KPI Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Revenue -->
+                    <div class="glass p-6 rounded-xl border-l-4 border-brand-500 animate-fade-in delay-100 hover:-translate-y-1 transition-transform">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Total Revenue</p>
+                                <h3 class="text-2xl font-bold text-white mt-1" id="kpiRevenue">$0.00</h3>
+                            </div>
+                            <div class="p-2 bg-brand-500/10 rounded-lg text-brand-500"><i class="fa-solid fa-dollar-sign"></i></div>
+                        </div>
+                        <div class="flex items-center text-xs">
+                            <span class="text-green-400 flex items-center font-medium"><i class="fa-solid fa-arrow-trend-up mr-1"></i> +12.5%</span>
+                            <span class="text-gray-500 ml-2">vs last month</span>
+                        </div>
+                    </div>
+
+                    <!-- Orders -->
+                    <div class="glass p-6 rounded-xl border-l-4 border-accent-500 animate-fade-in delay-100 hover:-translate-y-1 transition-transform">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Total Orders</p>
+                                <h3 class="text-2xl font-bold text-white mt-1" id="kpiOrders">0</h3>
+                            </div>
+                            <div class="p-2 bg-accent-500/10 rounded-lg text-accent-500"><i class="fa-solid fa-cart-shopping"></i></div>
+                        </div>
+                        <div class="flex items-center text-xs">
+                            <span class="text-green-400 flex items-center font-medium"><i class="fa-solid fa-arrow-trend-up mr-1"></i> +8.2%</span>
+                            <span class="text-gray-500 ml-2">vs last month</span>
+                        </div>
+                    </div>
+
+                    <!-- Profit -->
+                    <div class="glass p-6 rounded-xl border-l-4 border-purple-500 animate-fade-in delay-200 hover:-translate-y-1 transition-transform">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Net Profit</p>
+                                <h3 class="text-2xl font-bold text-white mt-1" id="kpiProfit">$0.00</h3>
+                            </div>
+                            <div class="p-2 bg-purple-500/10 rounded-lg text-purple-500"><i class="fa-solid fa-wallet"></i></div>
+                        </div>
+                        <div class="flex items-center text-xs">
+                            <span class="text-red-400 flex items-center font-medium"><i class="fa-solid fa-arrow-trend-down mr-1"></i> -2.4%</span>
+                            <span class="text-gray-500 ml-2">vs last month</span>
+                        </div>
+                    </div>
+
+                    <!-- Customers -->
+                    <div class="glass p-6 rounded-xl border-l-4 border-pink-500 animate-fade-in delay-200 hover:-translate-y-1 transition-transform">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <p class="text-gray-400 text-xs font-medium uppercase tracking-wider">Active Customers</p>
+                                <h3 class="text-2xl font-bold text-white mt-1" id="kpiCustomers">0</h3>
+                            </div>
+                            <div class="p-2 bg-pink-500/10 rounded-lg text-pink-500"><i class="fa-solid fa-user-group"></i></div>
+                        </div>
+                        <div class="flex items-center text-xs">
+                            <span class="text-green-400 flex items-center font-medium"><i class="fa-solid fa-arrow-trend-up mr-1"></i> +5.1%</span>
+                            <span class="text-gray-500 ml-2">vs last month</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Section -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Main Trend Chart -->
+                    <div class="lg:col-span-2 glass p-6 rounded-xl animate-fade-in delay-300">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-white">Revenue & Sales Trend</h3>
+                            <div class="flex space-x-2">
+                                <button class="px-3 py-1 bg-dark-700 text-xs rounded hover:bg-brand-600 transition-colors">Monthly</button>
+                                <button class="px-3 py-1 bg-transparent border border-dark-600 text-gray-400 text-xs rounded hover:text-white">Weekly</button>
+                            </div>
+                        </div>
+                        <div class="h-72 w-full">
+                            <canvas id="revenueChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Category Distribution -->
+                    <div class="glass p-6 rounded-xl animate-fade-in delay-300">
+                        <h3 class="text-lg font-semibold text-white mb-6">Sales by Category</h3>
+                        <div class="h-60 w-full flex items-center justify-center">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                        <div class="mt-6 space-y-3" id="categoryLegend">
+                            <!-- Legend items generated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Tables & AI Insights -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
+                    <!-- Top Products -->
+                    <div class="glass p-6 rounded-xl animate-fade-in delay-300">
+                        <h3 class="text-lg font-semibold text-white mb-4">Top Selling Products</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-xs text-gray-500 uppercase border-b border-dark-700">
+                                        <th class="py-3 font-medium">Product Name</th>
+                                        <th class="py-3 font-medium">Category</th>
+                                        <th class="py-3 font-medium text-right">Sales</th>
+                                        <th class="py-3 font-medium text-right">Revenue</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="topProductsTable" class="text-sm text-gray-300">
+                                    <!-- Rows generated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- AI Insights -->
+                    <div class="glass p-6 rounded-xl relative overflow-hidden animate-fade-in delay-300">
+                        <div class="absolute top-0 right-0 p-4 opacity-10">
+                            <i class="fa-solid fa-robot text-8xl text-brand-500"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                            <i class="fa-solid fa-sparkles text-brand-500 mr-2"></i> AI Insights
+                        </h3>
+                        <div id="aiInsightsContainer" class="space-y-4">
+                            <!-- AI Content generated by JS -->
+                            <div class="flex items-start p-3 bg-dark-700/50 rounded-lg border border-dark-600">
+                                <div class="mt-1 mr-3 text-brand-400"><i class="fa-solid fa-circle-info"></i></div>
+                                <div>
+                                    <p class="text-sm text-white font-medium">Analysis Ready</p>
+                                    <p class="text-xs text-gray-400 mt-1">Upload data to generate actionable business intelligence.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button onclick="regenerateAI()" class="mt-4 text-xs text-brand-400 hover:text-brand-300 flex items-center">
+                            <i class="fa-solid fa-rotate mr-1"></i> Refresh Analysis
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-dark-800 border border-dark-600 text-white px-6 py-4 rounded-lg shadow-2xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center">
+        <div id="toastIcon" class="mr-3 text-green-500"><i class="fa-solid fa-check-circle"></i></div>
+        <div id="toastMessage">Operation successful</div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let rawData = [];
+        let charts = {};
+
+        // --- Utility Functions ---
+        const formatCurrency = (num) => {
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+        };
+
+        const showToast = (msg, type = 'success') => {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const msgEl = document.getElementById('toastMessage');
+            
+            msgEl.innerText = msg;
+            if(type === 'error') {
+                icon.className = 'mr-3 text-red-500';
+                icon.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i>';
+            } else {
+                icon.className = 'mr-3 text-green-500';
+                icon.innerHTML = '<i class="fa-solid fa-check-circle"></i>';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        };
+
+        // --- Data Handling ---
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    processData(jsonData);
+                } catch (error) {
+                    console.error(error);
+                    showToast("Error parsing file. Please check format.", "error");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function loadDemoData(e) {
+            e.stopPropagation();
+            // Generate dummy data
+            const categories = ['Electronics', 'Fashion', 'Home & Garden', 'Sports', 'Toys'];
+            const regions = ['North America', 'Europe', 'Asia', 'South America'];
+            const products = ['Smartphone X', 'Laptop Pro', 'Running Shoes', 'Coffee Maker', 'Winter Jacket', 'Gaming Console', 'Desk Chair'];
+            
+            const data = [];
+            const today = new Date();
+            
+            for (let i = 0; i < 500; i++) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - Math.floor(Math.random() * 90));
+                
+                const price = Math.floor(Math.random() * 500) + 20;
+                const quantity = Math.floor(Math.random() * 5) + 1;
+                const cost = price * 0.6; // 40% margin
+                
+                data.push({
+                    'Order ID': `ORD-${1000 + i}`,
+                    'Date': date.toISOString().split('T')[0],
+                    'Product': products[Math.floor(Math.random() * products.length)],
+                    'Category': categories[Math.floor(Math.random() * categories.length)],
+                    'Region': regions[Math.floor(Math.random() * regions.length)],
+                    'Quantity': quantity,
+                    'Price': price,
+                    'Total Sales': price * quantity,
+                    'Cost': cost * quantity,
+                    'Profit': (price * quantity) - (cost * quantity),
+                    'Customer ID': `CUST-${Math.floor(Math.random() * 100)}`
+                });
+            }
+            // Sort by date
+            data.sort((a, b) => new Date(a['Date']) - new Date(b['Date']));
+            processData(data);
+        }
+
+        // --- Analysis Engine ---
+        function processData(data) {
+            if (!data || data.length === 0) {
+                showToast("No data found in file.", "error");
+                return;
+            }
+
+            rawData = data;
+            
+            // Normalize keys
+            const sample = data[0];
+            const keyMap = {
+                sales: Object.keys(sample).find(k => k.toLowerCase().includes('sales') || k.toLowerCase().includes('revenue') || k.toLowerCase().includes('total')),
+                profit: Object.keys(sample).find(k => k.toLowerCase().includes('profit')),
+                category: Object.keys(sample).find(k => k.toLowerCase().includes('category')),
+                date: Object.keys(sample).find(k => k.toLowerCase().includes('date')),
+                product: Object.keys(sample).find(k => k.toLowerCase().includes('product')),
+                order: Object.keys(sample).find(k => k.toLowerCase().includes('order'))
+            };
+
+            // Calculate KPIs
+            const totalRevenue = data.reduce((sum, row) => sum + (parseFloat(row[keyMap.sales]) || 0), 0);
+            const totalProfit = data.reduce((sum, row) => sum + (parseFloat(row[keyMap.profit]) || 0), 0);
+            const totalOrders = new Set(data.map(row => row[keyMap.order])).size; // Approximate unique orders
+            
+            // Animate Numbers
+            animateValue("kpiRevenue", totalRevenue, true);
+            animateValue("kpiProfit", totalProfit, true);
+            animateValue("kpiOrders", totalOrders, false);
+            // Estimate unique customers (mock logic)
+            const customers = new Set(data.map((_, i) => `CUST-${i % 50}`)).size; 
+            animateValue("kpiCustomers", customers, false);
+
+            // Prepare Charts
+            prepareTrendChart(data, keyMap);
+            prepareCategoryChart(data, keyMap);
+            prepareTopProducts(data, keyMap);
+            generateAIInsights(data, keyMap, totalRevenue, totalProfit);
+
+            // UI Transition
+            document.getElementById('uploadOverlay').classList.add('hidden');
+            document.getElementById('dashboardContent').classList.remove('hidden');
+            showToast("Dataset analyzed successfully");
+        }
+
+        function animateValue(id, end, isCurrency) {
+            const obj = document.getElementById(id);
+            const duration = 1500;
+            let startTimestamp = null;
+            const start = 0;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const val = Math.floor(progress * (end - start) + start);
+                obj.innerHTML = isCurrency ? formatCurrency(val) : val.toLocaleString();
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
+                } else {
+                    obj.innerHTML = isCurrency ? formatCurrency(end) : end.toLocaleString();
+                }
+            };
+            window.requestAnimationFrame(step);
+        }
+
+        // --- Charting Logic ---
+        function prepareTrendChart(data, keyMap) {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            
+            // Group by Date (Month)
+            const monthlyData = {};
+            data.forEach(row => {
+                const date = new Date(row[keyMap.date]);
+                const monthKey = date.toLocaleString('default', { month: 'short' });
+                
+                if(!monthlyData[monthKey]) monthlyData[monthKey] = { revenue: 0, profit: 0 };
+                monthlyData[monthKey].revenue += parseFloat(row[keyMap.sales]) || 0;
+                monthlyData[monthKey].profit += parseFloat(row[keyMap.profit]) || 0;
+            });
+
+            const labels = Object.keys(monthlyData);
+            const revenueData = labels.map(l => monthlyData[l].revenue);
+            const profitData = labels.map(l => monthlyData[l].profit);
+
+            if (charts.revenue) charts.revenue.destroy();
+
+            charts.revenue = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Revenue',
+                            data: revenueData,
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 3
+                        },
+                        {
+                            label: 'Profit',
+                            data: profitData,
+                            borderColor: '#06b6d4',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            tension: 0.4,
+                            pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: '#94a3b8' } }
+                    },
+                    scales: {
+                        y: {
+                            grid: { color: '#334155' },
+                            ticks: { color: '#94a3b8', callback: (val) => '$' + val/1000 + 'k' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function prepareCategoryChart(data, keyMap) {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            
+            const catData = {};
+            data.forEach(row => {
+                const cat = row[keyMap.category] || 'Unknown';
+                catData[cat] = (catData[cat] || 0) + (parseFloat(row[keyMap.sales]) || 0);
+            });
+
+            const labels = Object.keys(catData);
+            const values = Object.values(catData);
+            const total = values.reduce((a, b) => a + b, 0);
+
+            // Update Legend HTML
+            const legendEl = document.getElementById('categoryLegend');
+            legendEl.innerHTML = '';
+            
+            const colors = ['#6366f1', '#06b6d4', '#ec4899', '#8b5cf6', '#10b981'];
+
+            labels.forEach((label, i) => {
+                const percentage = ((values[i]/total)*100).toFixed(1);
+                const color = colors[i % colors.length];
+                legendEl.innerHTML += `
+                    <div class="flex items-center justify-between text-sm">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 rounded-full mr-2" style="background-color: ${color}"></span>
+                            <span class="text-gray-300">${label}</span>
+                        </div>
+                        <span class="text-white font-medium">${percentage}%</span>
+                    </div>
+                `;
+            });
+
+            if (charts.category) charts.category.destroy();
+
+            charts.category = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function prepareTopProducts(data, keyMap) {
+            const prodData = {};
+            data.forEach(row => {
+                const prod = row[keyMap.product] || 'Unknown';
+                const cat = row[keyMap.category] || 'General';
+                const sales = parseFloat(row[keyMap.sales]) || 0;
+                
+                if (!prodData[prod]) prodData[prod] = { category: cat, sales: 0, count: 0 };
+                prodData[prod].sales += sales;
+                prodData[prod].count += 1;
+            });
+
+            // Sort and take top 5
+            const sorted = Object.entries(prodData)
+                .sort((a, b) => b[1].sales - a[1].sales)
+                .slice(0, 5);
+
+            const tbody = document.getElementById('topProductsTable');
+            tbody.innerHTML = '';
+
+            sorted.forEach(([name, info], index) => {
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-dark-700 hover:bg-dark-700/30 transition-colors";
+                tr.innerHTML = `
+                    <td class="py-3 pl-2">
+                        <div class="flex items-center">
+                            <span class="w-6 h-6 rounded bg-dark-700 flex items-center justify-center text-xs font-bold text-gray-400 mr-3">${index + 1}</span>
+                            <span class="font-medium text-white">${name}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 text-gray-400"><span class="bg-dark-700 px-2 py-0.5 rounded text-xs">${info.category}</span></td>
+                    <td class="py-3 text-right text-gray-300">${info.count}</td>
+                    <td class="py-3 text-right text-white font-medium">${formatCurrency(info.sales)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- AI Simulation Logic ---
+        function generateAIInsights(data, keyMap, totalRevenue, totalProfit) {
+            const container = document.getElementById('aiInsightsContainer');
+            const margin = ((totalProfit / totalRevenue) * 100).toFixed(1);
+            
+            // Find best category
+            const catPerf = {};
+            data.forEach(r => {
+                const c = r[keyMap.category];
+                if(!catPerf[c]) catPerf[c] = 0;
+                catPerf[c] += r[keyMap.sales];
+            });
+            const bestCat = Object.entries(catPerf).sort((a,b) => b[1] - a[1])[0][0];
+
+            const insights = [
+                {
+                    type: 'success',
+                    title: 'Strong Profit Margins',
+                    msg: `Your current profit margin is <span class="text-white font-bold">${margin}%</span>. This is above the industry average for e-commerce.`
+                },
+                {
+                    type: 'info',
+                    title: 'Category Leader',
+                    msg: `<span class="text-brand-400 font-bold">${bestCat}</span> is your top-performing category this month. Consider increasing inventory for related products.`
+                },
+                {
+                    type: 'warning',
+                    title: 'Inventory Suggestion',
+                    msg: 'AI predicts a 15% surge in demand for "Electronics" in the coming weeks based on historical trends.'
+                }
+            ];
+
+            container.innerHTML = '';
+            insights.forEach((insight, i) => {
+                let icon = 'fa-circle-info';
+                let color = 'text-brand-400';
+                
+                if (insight.type === 'success') { icon = 'fa-arrow-trend-up'; color = 'text-green-400'; }
+                if (insight.type === 'warning') { icon = 'fa-triangle-exclamation'; color = 'text-yellow-400'; }
+
+                container.innerHTML += `
+                    <div class="flex items-start p-3 bg-dark-700/50 rounded-lg border border-dark-600 animate-fade-in" style="animation-delay: ${i * 100}ms">
+                        <div class="mt-1 mr-3 ${color}"><i class="fa-solid ${icon}"></i></div>
+                        <div>
+                            <p class="text-sm text-white font-medium">${insight.title}</p>
+                            <p class="text-xs text-gray-400 mt-1">${insight.msg}</p>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function regenerateAI() {
+            if(rawData.length === 0) return;
+            // Just a visual refresh
+            const btn = document.querySelector('button[onclick="regenerateAI()"]');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<div class="loader w-3 h-3 border-2"></div> Analyzing...';
+            
+            setTimeout(() => {
+                // Re-run logic with slight random variations to simulate "new" AI thought
+                const keyMap = {
+                    sales: Object.keys(rawData[0]).find(k => k.toLowerCase().includes('sales')),
+                    profit: Object.keys(rawData[0]).find(k => k.toLowerCase().includes('profit')),
+                    category: Object.keys(rawData[0]).find(k => k.toLowerCase().includes('category'))
+                };
+                const totalRevenue = rawData.reduce((sum, row) => sum + (parseFloat(row[keyMap.sales]) || 0), 0);
+                const totalProfit = rawData.reduce((sum, row) => sum + (parseFloat(row[keyMap.profit]) || 0), 0);
+                generateAIInsights(rawData, keyMap, totalRevenue, totalProfit);
+                btn.innerHTML = originalHtml;
+                showToast("AI insights updated");
+            }, 1000);
+        }
+
+        function generateReport() {
+            if(rawData.length === 0) {
+                showToast("No data to export", "error");
+                return;
+            }
+            // Simulate PDF generation
+            const btn = document.querySelector('button[onclick="generateReport()"]');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<div class="loader w-4 h-4 border-2"></div> Generating...';
+            
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                showToast("Report downloaded successfully (Simulated)");
+                // In a real app with backend, this would trigger a window.location or blob download
+            }, 1500);
+        }
+
+    </script>
+</body>
+</html>
