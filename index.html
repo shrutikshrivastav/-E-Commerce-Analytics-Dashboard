@@ -7,11 +7,10 @@
 <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
 <style>
 :root{
-  --bg:#f3f4f8; --panel:#ffffff; --panel-2:#fafbfd;
-  --ink:#1f2937; --ink-soft:#4b5563; --muted:#6b7280;
-  --line:#e5e7eb;
-  --sidebar:#101827; --sidebar-2:#0b1220; --sidebar-ink:#cbd5e1; --sidebar-active:#22d3ee;
-  --primary:#6366f1; --accent:#06b6d4; --success:#10b981; --warn:#f59e0b; --danger:#ef4444;
+  --bg:#f3f4f8; --panel:#ffffff; --ink:#1f2937; --ink-soft:#4b5563; --muted:#6b7280;
+  --line:#e5e7eb; --sidebar:#101827; --sidebar-2:#0b1220; --sidebar-ink:#cbd5e1;
+  --sidebar-active:#22d3ee; --primary:#6366f1; --accent:#06b6d4;
+  --success:#10b981; --warn:#f59e0b; --danger:#ef4444;
   --grad:linear-gradient(135deg,#6366f1,#06b6d4);
   --shadow:0 1px 3px rgba(15,23,42,.06),0 8px 24px -8px rgba(15,23,42,.08);
   --radius:14px;
@@ -37,11 +36,11 @@ button{font-family:inherit;cursor:pointer;border:none}
 .main{display:flex;flex-direction:column;min-width:0}
 .navbar{background:#fff;border-bottom:1px solid var(--line);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;box-shadow:var(--shadow)}
 .navbar h1{margin:0;font-size:18px;font-weight:700}
-.navbar-actions{display:flex;gap:10px;align-items:center}
+.navbar-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .badge{background:#ecfeff;color:#0e7490;padding:5px 10px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid #a5f3fc}
 .btn{padding:9px 16px;border-radius:10px;font-weight:600;font-size:13px;display:inline-flex;align-items:center;gap:6px;transition:.2s}
 .btn-primary{background:var(--grad);color:#fff;box-shadow:0 4px 12px rgba(99,102,241,.3)}
-.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(99,102,241,.4)}
+.btn-primary:hover{transform:translateY(-1px)}
 .btn-ghost{background:#f1f5f9;color:var(--ink)}
 .btn-ghost:hover{background:#e2e8f0}
 .btn-dark{background:var(--sidebar);color:#fff}
@@ -49,7 +48,7 @@ button{font-family:inherit;cursor:pointer;border:none}
 
 .content{padding:24px;display:flex;flex-direction:column;gap:20px}
 .upload-card{background:#fff;border:2px dashed #cbd5e1;border-radius:var(--radius);padding:28px;text-align:center;transition:.2s}
-.upload-card:hover{border-color:var(--primary);background:#fafbff}
+.upload-card.drag{border-color:var(--primary);background:#fafbff}
 .upload-card h3{margin:0 0 6px;font-size:16px}
 .upload-card p{margin:0 0 16px;color:var(--muted);font-size:13px}
 .upload-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
@@ -57,7 +56,7 @@ input[type=file]{display:none}
 
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px}
 .kpi-card{background:#fff;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);position:relative;overflow:hidden;border:1px solid var(--line);transition:.2s}
-.kpi-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px -4px rgba(15,23,42,.12)}
+.kpi-card:hover{transform:translateY(-2px)}
 .kpi-card::before{content:"";position:absolute;top:0;left:0;width:4px;height:100%;background:var(--grad)}
 .kpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
 .kpi-value{font-size:24px;font-weight:800;margin:6px 0 2px;color:var(--ink)}
@@ -65,18 +64,16 @@ input[type=file]{display:none}
 .kpi-icon{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:10px;background:#eef2ff;display:grid;place-items:center;color:var(--primary);font-size:16px}
 
 .grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:18px}
-.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
 
 .card{background:#fff;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);border:1px solid var(--line)}
 .card h3{margin:0 0 14px;font-size:14px;font-weight:700;color:var(--ink-soft);display:flex;align-items:center;gap:8px}
 .card h3::before{content:"";width:4px;height:14px;background:var(--grad);border-radius:2px}
-
 .chart{width:100%;height:300px}
 
 .insights-card{background:linear-gradient(135deg,#1f2937,#0f172a);color:#fff;border-radius:var(--radius);padding:22px;box-shadow:var(--shadow)}
 .insights-card h3{color:#22d3ee;margin:0 0 14px;display:flex;align-items:center;gap:8px;font-size:15px}
-.insight-item{background:rgba(255,255,255,.06);border-left:3px solid #22d3ee;padding:10px 14px;border-radius:8px;margin-bottom:8px;font-size:13px;line-height:1.55;backdrop-filter:blur(8px)}
-.insight-item strong{color:#fbbf24}
+.insight-item{background:rgba(255,255,255,.06);border-left:3px solid #22d3ee;padding:10px 14px;border-radius:8px;margin-bottom:8px;font-size:13px;line-height:1.55}
+.insight-item b{color:#fbbf24}
 
 table.data{width:100%;border-collapse:collapse;font-size:12px}
 table.data thead{background:#f8fafc;position:sticky;top:0}
@@ -90,10 +87,9 @@ table.data tr:hover td{background:#f8fafc}
 
 .spinner{display:none;width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite;margin:14px auto}
 @keyframes spin{to{transform:rotate(360deg)}}
-.toast{position:fixed;bottom:24px;right:24px;background:var(--sidebar);color:#fff;padding:14px 18px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:13px;z-index:1000;animation:slide .3s ease;display:none}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--sidebar);color:#fff;padding:14px 18px;border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.25);font-size:13px;z-index:1000;display:none;max-width:340px}
 .toast.error{background:var(--danger)}
 .toast.success{background:var(--success)}
-@keyframes slide{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
 
 .section{display:none}
 .section.active{display:flex;flex-direction:column;gap:20px;animation:fadeIn .3s}
@@ -108,15 +104,13 @@ table.data tr:hover td{background:#f8fafc}
   .app{grid-template-columns:1fr}
   .sidebar{position:fixed;left:-260px;z-index:50;transition:.3s;height:100vh}
   .sidebar.open{left:0}
-  .navbar h1{font-size:15px}
+  .menu-btn{display:inline-block}
 }
 .menu-btn{display:none;background:transparent;color:var(--ink);font-size:20px;padding:4px 8px}
-@media (max-width:900px){.menu-btn{display:inline-block}}
 </style>
 </head>
 <body>
 <div class="app">
-  <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="brand">
       <div class="brand-logo">IA</div>
@@ -135,7 +129,6 @@ table.data tr:hover td{background:#f8fafc}
     <div class="sidebar-footer">v1.0 • © 2025 Insightly</div>
   </aside>
 
-  <!-- MAIN -->
   <div class="main">
     <header class="navbar">
       <div style="display:flex;align-items:center;gap:10px">
@@ -144,25 +137,29 @@ table.data tr:hover td{background:#f8fafc}
       </div>
       <div class="navbar-actions">
         <span class="badge" id="file-badge">No data loaded</span>
-        <button class="btn btn-ghost" onclick="loadSample()">⚡ Sample Data</button>
-        <button class="btn btn-dark" onclick="exportExcel()">⬇ Excel</button>
+        <button class="btn btn-ghost" id="btn-sample">⚡ Sample Data</button>
+        <button class="btn btn-dark" id="btn-excel">⬇ Excel</button>
       </div>
     </header>
 
     <main class="content">
-      <!-- Upload always visible -->
       <div class="upload-card" id="upload-card">
         <h3>📤 Upload Your Dataset</h3>
-        <p>CSV or Excel (.xlsx) — orders, customers, products, sales, profit, categories, regions</p>
+        <p>CSV or Excel (.xlsx) — drag &amp; drop or click to select. Required columns: sales (others optional).</p>
         <div class="upload-actions">
           <label class="btn btn-primary" for="file-input">Choose File</label>
-          <input id="file-input" type="file" accept=".csv,.xlsx,.xls" onchange="uploadFile(event)" />
-          <button class="btn btn-ghost" onclick="loadSample()">Try Sample Dataset</button>
+          <input id="file-input" type="file" accept=".csv,.xlsx,.xls" />
+          <button class="btn btn-ghost" id="btn-sample-2">Try Sample Dataset</button>
         </div>
         <div class="spinner" id="spinner"></div>
       </div>
 
-      <!-- Sections -->
+      <div id="empty-state" class="card empty">
+        <div class="empty-icon">📊</div>
+        <h3>No data yet</h3>
+        <p>Upload a CSV/Excel file or click <b>Sample Data</b> to begin.</p>
+      </div>
+
       <section class="section active" id="section-overview">
         <div class="kpi-grid" id="kpi-grid"></div>
         <div class="grid-2">
@@ -209,12 +206,6 @@ table.data tr:hover td{background:#f8fafc}
           <div class="table-wrap"><table class="data" id="data-table"></table></div>
         </div>
       </section>
-
-      <div id="empty-state" class="card empty">
-        <div class="empty-icon">📊</div>
-        <h3>No data yet</h3>
-        <p>Upload a CSV/Excel file or click <b>Sample Data</b> to start.</p>
-      </div>
     </main>
   </div>
 </div>
@@ -224,7 +215,6 @@ table.data tr:hover td{background:#f8fafc}
 <script>
 let CURRENT = null;
 
-// Navigation
 document.querySelectorAll('.nav-item').forEach(it=>{
   it.addEventListener('click',()=>{
     document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -234,67 +224,89 @@ document.querySelectorAll('.nav-item').forEach(it=>{
     document.getElementById('section-'+sec).classList.add('active');
     document.getElementById('page-title').textContent = it.textContent.trim();
     if(window.innerWidth<=900) document.getElementById('sidebar').classList.remove('open');
-    // Re-render plots in case they were hidden
-    if(CURRENT) setTimeout(renderAll,50);
+    if(CURRENT) setTimeout(renderAll,80);
   });
 });
 
-function toast(msg, type='success'){
+function toast(msg, type){
   const t = document.getElementById('toast');
   t.textContent = msg;
-  t.className = 'toast '+type;
+  t.className = 'toast ' + (type || '');
   t.style.display = 'block';
-  setTimeout(()=>{t.style.display='none'},3200);
+  setTimeout(()=>{ t.style.display='none' }, 3500);
 }
 
-async function uploadFile(e){
-  const f = e.target.files[0];
-  if(!f) return;
+// File input
+document.getElementById('file-input').addEventListener('change', function(e){
+  if(e.target.files && e.target.files[0]) uploadFile(e.target.files[0]);
+});
+
+// Drag & drop
+const dropZone = document.getElementById('upload-card');
+['dragenter','dragover'].forEach(ev=>dropZone.addEventListener(ev,e=>{e.preventDefault();dropZone.classList.add('drag')}));
+['dragleave','drop'].forEach(ev=>dropZone.addEventListener(ev,e=>{e.preventDefault();dropZone.classList.remove('drag')}));
+dropZone.addEventListener('drop', e=>{
+  if(e.dataTransfer.files && e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]);
+});
+
+document.getElementById('btn-sample').addEventListener('click', loadSample);
+document.getElementById('btn-sample-2').addEventListener('click', loadSample);
+document.getElementById('btn-excel').addEventListener('click', exportExcel);
+
+async function uploadFile(file){
   const fd = new FormData();
-  fd.append('file', f);
-  document.getElementById('spinner').style.display='block';
+  fd.append('file', file);
+  document.getElementById('spinner').style.display = 'block';
   try{
-    const r = await fetch('/api/upload',{method:'POST',body:fd});
+    const r = await fetch('/api/upload', { method:'POST', body: fd });
     const j = await r.json();
-    if(!j.ok) throw new Error(j.error||'Upload failed');
+    if(!r.ok || !j.ok) throw new Error(j.error || 'Upload failed');
     CURRENT = j.analytics;
-    document.getElementById('file-badge').textContent = '📄 '+j.filename;
-    toast('Dataset loaded successfully','success');
+    document.getElementById('file-badge').textContent = '📄 ' + j.filename;
+    toast('Dataset loaded successfully', 'success');
     renderAll();
-  }catch(err){ toast(err.message,'error'); }
-  finally{ document.getElementById('spinner').style.display='none'; }
+  } catch(err){
+    toast(err.message, 'error');
+  } finally {
+    document.getElementById('spinner').style.display = 'none';
+    document.getElementById('file-input').value = '';
+  }
 }
 
 async function loadSample(){
-  document.getElementById('spinner').style.display='block';
+  document.getElementById('spinner').style.display = 'block';
   try{
-    const r = await fetch('/api/sample',{method:'POST'});
+    const r = await fetch('/api/sample', { method:'POST' });
     const j = await r.json();
-    if(!j.ok) throw new Error(j.error||'Failed');
+    if(!r.ok || !j.ok) throw new Error(j.error || 'Failed');
     CURRENT = j.analytics;
-    document.getElementById('file-badge').textContent = '📄 '+j.filename;
-    toast('Sample dataset loaded','success');
+    document.getElementById('file-badge').textContent = '📄 ' + j.filename;
+    toast('Sample dataset loaded', 'success');
     renderAll();
-  }catch(err){ toast(err.message,'error'); }
-  finally{ document.getElementById('spinner').style.display='none'; }
+  } catch(err){
+    toast(err.message, 'error');
+  } finally {
+    document.getElementById('spinner').style.display = 'none';
+  }
 }
 
 async function exportExcel(){
-  if(!CURRENT){ toast('Upload data first','error'); return; }
+  if(!CURRENT){ toast('Upload data first', 'error'); return; }
   try{
     const r = await fetch('/api/export/excel');
-    if(!r.ok){ const e = await r.json(); throw new Error(e.error); }
+    if(!r.ok){ const e = await r.json(); throw new Error(e.error || 'Export failed'); }
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = 'ecommerce_report.xlsx';
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(url);
-    toast('Excel downloaded','success');
-  }catch(err){ toast(err.message,'error'); }
+    toast('Excel report downloaded', 'success');
+  } catch(err){
+    toast(err.message, 'error');
+  }
 }
 
-// Plotly layout helper
 const baseLayout = {
   paper_bgcolor:'transparent', plot_bgcolor:'transparent',
   font:{family:'Inter,sans-serif', size:12, color:'#374151'},
@@ -303,12 +315,12 @@ const baseLayout = {
   yaxis:{gridcolor:'#eef2f7', linecolor:'#cbd5e1'},
   legend:{orientation:'h', y:-0.2}
 };
-const config = {responsive:true, displayModeBar:false};
+const config = { responsive:true, displayModeBar:false };
 const palette = ['#6366f1','#06b6d4','#10b981','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316','#3b82f6'];
 
 function renderAll(){
   if(!CURRENT) return;
-  document.getElementById('empty-state').style.display='none';
+  document.getElementById('empty-state').style.display = 'none';
   renderKPI();
   renderMonthly();
   renderProfitLoss();
@@ -327,67 +339,68 @@ function renderKPI(){
   const k = CURRENT.kpi;
   const items = [
     {label:'Total Sales', val:'$'+k.total_sales.toLocaleString(undefined,{minimumFractionDigits:2}), sub:'Gross revenue', icon:'💰'},
-    {label:'Total Profit', val:'$'+k.total_profit.toLocaleString(undefined,{minimumFractionDigits:2}), sub:`Margin ${k.profit_margin}%`, icon:'📈'},
+    {label:'Total Profit', val:'$'+k.total_profit.toLocaleString(undefined,{minimumFractionDigits:2}), sub:'Margin '+k.profit_margin+'%', icon:'📈'},
     {label:'Total Orders', val:k.total_orders.toLocaleString(), sub:'Transactions', icon:'🧾'},
     {label:'Customers', val:k.total_customers.toLocaleString(), sub:'Unique buyers', icon:'👥'},
     {label:'Avg Order Value', val:'$'+k.avg_order_value.toLocaleString(undefined,{minimumFractionDigits:2}), sub:'Per order', icon:'🛒'},
-    {label:'Units Sold', val:k.total_quantity.toLocaleString(), sub:'Quantity', icon:'📦'},
+    {label:'Units Sold', val:k.total_quantity.toLocaleString(), sub:'Quantity', icon:'📦'}
   ];
-  document.getElementById('kpi-grid').innerHTML = items.map(i=>`
-    <div class="kpi-card">
-      <div class="kpi-icon">${i.icon}</div>
-      <div class="kpi-label">${i.label}</div>
-      <div class="kpi-value">${i.val}</div>
-      <div class="kpi-sub">${i.sub}</div>
-    </div>`).join('');
+  document.getElementById('kpi-grid').innerHTML = items.map(i=>
+    '<div class="kpi-card"><div class="kpi-icon">'+i.icon+'</div>'+
+    '<div class="kpi-label">'+i.label+'</div>'+
+    '<div class="kpi-value">'+i.val+'</div>'+
+    '<div class="kpi-sub">'+i.sub+'</div></div>'
+  ).join('');
 }
 
 function renderMonthly(){
   const m = CURRENT.monthly;
   if(!m.labels.length){ Plotly.purge('chart-monthly'); return; }
-  const traces = [
-    {x:m.labels,y:m.sales,name:'Sales',type:'scatter',mode:'lines+markers',line:{color:'#6366f1',width:3},fill:'tozeroy',fillcolor:'rgba(99,102,241,.12)'}
-  ];
-  if(m.profit.length) traces.push({x:m.labels,y:m.profit,name:'Profit',type:'scatter',mode:'lines+markers',line:{color:'#10b981',width:3,dash:'dot'}});
-  Plotly.newPlot('chart-monthly', traces, {...baseLayout}, config);
+  const traces = [{
+    x:m.labels, y:m.sales, name:'Sales', type:'scatter', mode:'lines+markers',
+    line:{color:'#6366f1',width:3}, fill:'tozeroy', fillcolor:'rgba(99,102,241,.12)'
+  }];
+  if(m.profit.length){
+    traces.push({x:m.labels, y:m.profit, name:'Profit', type:'scatter', mode:'lines+markers',
+      line:{color:'#10b981',width:3,dash:'dot'}});
+  }
+  Plotly.newPlot('chart-monthly', traces, Object.assign({},baseLayout), config);
 }
 
 function renderProfitLoss(){
   const p = CURRENT.profit_loss;
-  const total = p.profit + p.loss || 1;
+  const total = (p.profit + p.loss) || 1;
   const pp = (p.profit/total*100).toFixed(1);
   const ll = (p.loss/total*100).toFixed(1);
-  document.getElementById('profit-loss-content').innerHTML = `
-    <div style="display:flex;justify-content:space-between;font-size:13px">
-      <div><b style="color:#10b981">Profit:</b> $${p.profit.toLocaleString()}</div>
-      <div><b style="color:#ef4444">Loss:</b> $${p.loss.toLocaleString()}</div>
-      <div><b>Net:</b> $${p.net.toLocaleString()}</div>
-    </div>
-    <div class="profit-bar">
-      <div class="profit-seg profit-pos" style="width:${pp}%">${pp}%</div>
-      <div class="profit-seg profit-neg" style="width:${ll}%">${ll}%</div>
-    </div>`;
+  document.getElementById('profit-loss-content').innerHTML =
+    '<div style="display:flex;justify-content:space-between;font-size:13px;flex-wrap:wrap;gap:8px">'+
+    '<div><b style="color:#10b981">Profit:</b> $'+p.profit.toLocaleString()+'</div>'+
+    '<div><b style="color:#ef4444">Loss:</b> $'+p.loss.toLocaleString()+'</div>'+
+    '<div><b>Net:</b> $'+p.net.toLocaleString()+'</div></div>'+
+    '<div class="profit-bar">'+
+    '<div class="profit-seg profit-pos" style="width:'+pp+'%">'+pp+'%</div>'+
+    '<div class="profit-seg profit-neg" style="width:'+ll+'%">'+ll+'%</div></div>';
   Plotly.newPlot('chart-pl', [{
     values:[p.profit, p.loss], labels:['Profit','Loss'], type:'pie', hole:.6,
     marker:{colors:['#10b981','#ef4444']}, textinfo:'label+percent'
-  }], {...baseLayout, showlegend:false, margin:{t:10,b:10,l:10,r:10}}, config);
+  }], Object.assign({},baseLayout,{showlegend:false, margin:{t:10,b:10,l:10,r:10}}), config);
 }
 
 function renderTrendFull(){
   const m = CURRENT.monthly;
   if(!m.labels.length) return;
   Plotly.newPlot('chart-trend-full', [
-    {x:m.labels,y:m.sales,name:'Sales',type:'bar',marker:{color:'#6366f1'}},
-    {x:m.labels,y:m.profit,name:'Profit',type:'scatter',mode:'lines+markers',yaxis:'y2',line:{color:'#10b981',width:3}}
-  ], {...baseLayout, yaxis2:{overlaying:'y',side:'right',gridcolor:'transparent'}}, config);
+    {x:m.labels, y:m.sales, name:'Sales', type:'bar', marker:{color:'#6366f1'}},
+    {x:m.labels, y:m.profit, name:'Profit', type:'scatter', mode:'lines+markers', yaxis:'y2', line:{color:'#10b981',width:3}}
+  ], Object.assign({},baseLayout,{yaxis2:{overlaying:'y',side:'right',gridcolor:'transparent'}}), config);
 }
 
 function renderCategory(){
   const c = CURRENT.category;
   if(!c.labels.length) return;
-  const traces = [{x:c.labels,y:c.sales,name:'Sales',type:'bar',marker:{color:'#6366f1'}}];
-  if(c.profit.length) traces.push({x:c.labels,y:c.profit,name:'Profit',type:'bar',marker:{color:'#10b981'}});
-  Plotly.newPlot('chart-category', traces, {...baseLayout, barmode:'group'}, config);
+  const traces = [{x:c.labels, y:c.sales, name:'Sales', type:'bar', marker:{color:'#6366f1'}}];
+  if(c.profit.length) traces.push({x:c.labels, y:c.profit, name:'Profit', type:'bar', marker:{color:'#10b981'}});
+  Plotly.newPlot('chart-category', traces, Object.assign({},baseLayout,{barmode:'group'}), config);
 }
 
 function renderProducts(){
@@ -396,7 +409,7 @@ function renderProducts(){
   Plotly.newPlot('chart-products', [{
     x:p.values, y:p.labels, type:'bar', orientation:'h',
     marker:{color:p.values, colorscale:[[0,'#06b6d4'],[1,'#6366f1']]}
-  }], {...baseLayout, yaxis:{autorange:'reversed',gridcolor:'#eef2f7'}}, config);
+  }], Object.assign({},baseLayout,{yaxis:{autorange:'reversed',gridcolor:'#eef2f7'}}), config);
 }
 
 function renderCatPie(){
@@ -405,7 +418,7 @@ function renderCatPie(){
   Plotly.newPlot('chart-cat-pie', [{
     values:c.sales, labels:c.labels, type:'pie', hole:.45,
     marker:{colors:palette}, textinfo:'label+percent'
-  }], {...baseLayout, showlegend:true}, config);
+  }], Object.assign({},baseLayout,{showlegend:true}), config);
 }
 
 function renderCustomers(){
@@ -414,7 +427,7 @@ function renderCustomers(){
   Plotly.newPlot('chart-customers', [{
     x:c.values, y:c.labels, type:'bar', orientation:'h',
     marker:{color:c.values, colorscale:[[0,'#10b981'],[1,'#6366f1']]}
-  }], {...baseLayout, yaxis:{autorange:'reversed',gridcolor:'#eef2f7'}}, config);
+  }], Object.assign({},baseLayout,{yaxis:{autorange:'reversed',gridcolor:'#eef2f7'}}), config);
 }
 
 function renderRegionBar(){
@@ -435,4 +448,18 @@ function renderRegionPie(){
 
 function renderInsights(){
   const list = CURRENT.insights || [];
-  document.getElementById('ins
+  const html = list.map(t => '<div class="insight-item">' + t.replace(/\*\*(.+?)\*\*/g,'<b>$1</b>') + '</div>').join('');
+  document.getElementById('insights-list').innerHTML = html || '<div class="insight-item">No insights available.</div>';
+}
+
+function renderTable(){
+  const s = CURRENT.sample;
+  if(!s || !s.columns.length) return;
+  let html = '<thead><tr>' + s.columns.map(c=>'<th>'+c+'</th>').join('') + '</tr></thead><tbody>';
+  html += s.rows.map(r => '<tr>' + r.map(v=>'<td>'+v+'</td>').join('') + '</tr>').join('');
+  html += '</tbody>';
+  document.getElementById('data-table').innerHTML = html;
+}
+</script>
+</body>
+</html>
