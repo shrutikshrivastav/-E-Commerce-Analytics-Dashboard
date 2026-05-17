@@ -1,23 +1,35 @@
-# Use a lightweight Python image
-FROM python:3.9-slim
+# ── Build stage ───────────────────────────────────────────────
+FROM python:3.11-slim AS base
 
-# Set working directory
+# Keeps Python from generating .pyc files and enables real-time logs
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y gcc
+# Install system deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install
+# Install Python deps first (layer cache)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy application files
 COPY app.py .
-COPY static /app/static  # Assuming you move the HTML/JS to a static folder in the real setup
-# For the single file demo, we might just serve the template
+COPY index.html .
 
-# Expose port
+# Create uploads directory
+RUN mkdir -p uploads
+
+# Expose port (Render injects $PORT at runtime; default 5000 for local)
 EXPOSE 5000
 
-# Run Gunicorn
-CMD ["gunicorn", "-b", "0.0.0.0:5000", "app:app"]
+# Gunicorn: 2 workers, 120s timeout for large uploads
+CMD gunicorn app:app \
+    --bind 0.0.0.0:${PORT:-5000} \
+    --workers 2 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile -
