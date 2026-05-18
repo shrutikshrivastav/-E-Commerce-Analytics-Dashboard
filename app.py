@@ -1,497 +1,420 @@
-import os
-import io
-import json
-import base64
-from datetime import datetime
-from flask import Flask, request, jsonify, send_file, render_template_string
+from flask import Flask, request, jsonify, send_file, render_template_from_string
+from flask_cors import CORS
 import pandas as pd
 import numpy as np
-from openpyxl import Workbook
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly.utils import PlotlyJSONEncoder
+import json
+import io
+import os
+import traceback
+from datetime import datetime
+import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
-from openpyxl.chart import BarChart, LineChart, PieChart, Reference
-from openpyxl.formatting.rule import ColorScaleRule
+import warnings
+warnings.filterwarnings('ignore')
 
-app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50 MB
+app = Flask(__name__, static_folder='.', template_folder='.')
+CORS(app)
 
-# In-memory dataset cache (per server instance)
-DATA_CACHE = {"df": None, "filename": None, "uploaded_at": None}
+UPLOAD_FOLDER = '/tmp/uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+CURRENT_DATA = {}
 
-# ------------------------------------------------------------------
-# Utility: Column auto-detection
-# ------------------------------------------------------------------
-COLUMN_ALIASES = {
-    "order_id":   ["order id", "orderid", "order_no", "order number", "invoice", "invoice id"],
-    "order_date": ["order date", "date", "purchase date", "order_date", "transaction date"],
-    "customer":   ["customer", "customer name", "client", "customer_name", "buyer"],
-    "product":    ["product", "product name", "item", "product_name", "sku name"],
-    "category":   ["category", "product category", "segment", "type"],
-    "region":     ["region", "country", "city", "state", "location", "area"],
-    "sales":      ["sales", "revenue", "amount", "total", "price", "total amount"],
-    "profit":     ["profit", "margin", "net profit", "earnings", "gain"],
-    "quantity":   ["quantity", "qty", "units", "count"],
-}
+def detect_columns(df):
+    """Auto-detect column mappings from various CSV formats."""
+    col_map = {}
+    cols_lower = {c.lower().strip(): c for c in df.columns}
 
+    date_keys = ['date','order date','orderdate','transaction date','sale date','invoice date','purchase date']
+    sales_keys = ['sales','revenue','amount','total','order amount','sale amount','total sales','gross sales','net sales','total revenue','price','total price','subtotal']
+    profit_keys = ['profit','net profit','profit amount','margin','net income','earnings','net margin']
+    quantity_keys = ['quantity','qty','units','count','order qty','quantity ordered','units sold','volume']
+    product_keys = ['product','product name','item','item name','product title','sku name','description','product description','goods']
+    category_keys = ['category','product category','segment','department','type','product type','sub-category','subcategory','class']
+    region_keys = ['region','state','country','city','location','area','territory','market','geography','geo']
+    customer_keys = ['customer','customer name','client','buyer','customer id','client name','account','customer_name']
+    order_keys = ['order id','orderid','order_id','transaction id','invoice id','invoice no','order no','order number']
 
-def detect_columns(df: pd.DataFrame) -> dict:
-    """Map standard fields to whatever columns the CSV actually has."""
-    cols = {c.lower().strip(): c for c in df.columns}
-    mapping = {}
-    for std, aliases in COLUMN_ALIASES.items():
-        for alias in aliases:
-            if alias in cols:
-                mapping[std] = cols[alias]
-                break
-    return mapping
+    def find_col(keys):
+        for k in keys:
+            if k in cols_lower:
+                return cols_lower[k]
+        return None
 
+    col_map['date']     = find_col(date_keys)
+    col_map['sales']    = find_col(sales_keys)
+    col_map['profit']   = find_col(profit_keys)
+    col_map['quantity'] = find_col(quantity_keys)
+    col_map['product']  = find_col(product_keys)
+    col_map['category'] = find_col(category_keys)
+    col_map['region']   = find_col(region_keys)
+    col_map['customer'] = find_col(customer_keys)
+    col_map['order_id'] = find_col(order_keys)
 
-def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Clean, parse dates, coerce numerics."""
+    # Fallback: use numeric columns for sales/profit
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    if not col_map['sales'] and numeric_cols:
+        col_map['sales'] = numeric_cols[0]
+    if not col_map['profit'] and len(numeric_cols) > 1:
+        col_map['profit'] = numeric_cols[1]
+
+    return col_map
+
+def clean_dataframe(df):
+    """Clean and standardize dataframe."""
     df = df.copy()
-    df.columns = [str(c).strip() for c in df.columns]
-    df = df.dropna(how="all")
-
-    mapping = detect_columns(df)
-
-    if "order_date" in mapping:
-        df[mapping["order_date"]] = pd.to_datetime(
-            df[mapping["order_date"]], errors="coerce", infer_datetime_format=True
-        )
-
-    for f in ["sales", "profit", "quantity"]:
-        if f in mapping:
-            df[mapping[f]] = pd.to_numeric(df[mapping[f]], errors="coerce")
-
-    for f in ["customer", "product", "category", "region"]:
-        if f in mapping:
-            df[mapping[f]] = df[mapping[f]].astype(str).str.strip()
-
-    df = df.dropna(subset=[mapping[k] for k in ["sales"] if k in mapping])
+    df.columns = df.columns.str.strip()
+    df = df.dropna(how='all')
+    df = df.drop_duplicates()
+    for col in df.select_dtypes(include=[np.number]).columns:
+        df[col] = df[col].fillna(0)
+    for col in df.select_dtypes(include=['object']).columns:
+        df[col] = df[col].fillna('Unknown').astype(str).str.strip()
     return df
 
+def parse_date_column(df, date_col):
+    """Robustly parse date columns."""
+    if date_col and date_col in df.columns:
+        try:
+            df[date_col] = pd.to_datetime(df[date_col], infer_datetime_format=True, errors='coerce')
+            df = df.dropna(subset=[date_col])
+        except:
+            pass
+    return df
 
-# ------------------------------------------------------------------
-# Analytics
-# ------------------------------------------------------------------
-def compute_analytics(df: pd.DataFrame) -> dict:
-    m = detect_columns(df)
-    result = {"mapping": m, "rows": len(df), "columns": list(df.columns)}
+def generate_ai_insights(kpis, top_products, category_data, monthly_data):
+    """Generate rule-based AI business insights."""
+    insights = []
 
-    sales_col   = m.get("sales")
-    profit_col  = m.get("profit")
-    date_col    = m.get("order_date")
-    cust_col    = m.get("customer")
-    prod_col    = m.get("product")
-    cat_col     = m.get("category")
-    region_col  = m.get("region")
-    qty_col     = m.get("quantity")
-    order_col   = m.get("order_id")
+    # Revenue insight
+    total_revenue = kpis.get('total_revenue', 0)
+    if total_revenue > 0:
+        insights.append({
+            "icon": "💰",
+            "title": "Revenue Performance",
+            "text": f"Total revenue stands at ${total_revenue:,.0f}. "
+                    + ("Strong performance — focus on scaling top channels." if total_revenue > 100000 else "Growth opportunity detected — consider expanding product range.")
+        })
 
-    # ---- KPI ----
-    total_sales  = float(df[sales_col].sum()) if sales_col else 0
-    total_profit = float(df[profit_col].sum()) if profit_col else 0
-    total_orders = int(df[order_col].nunique()) if order_col else len(df)
-    total_customers = int(df[cust_col].nunique()) if cust_col else 0
-    avg_order_value = total_sales / total_orders if total_orders else 0
-    profit_margin = (total_profit / total_sales * 100) if total_sales else 0
-    total_qty = int(df[qty_col].sum()) if qty_col else 0
-
-    result["kpi"] = {
-        "total_sales": round(total_sales, 2),
-        "total_profit": round(total_profit, 2),
-        "total_orders": total_orders,
-        "total_customers": total_customers,
-        "avg_order_value": round(avg_order_value, 2),
-        "profit_margin": round(profit_margin, 2),
-        "total_quantity": total_qty,
-    }
-
-    # ---- Monthly trend ----
-    if date_col and sales_col:
-        tmp = df.dropna(subset=[date_col]).copy()
-        tmp["__month"] = tmp[date_col].dt.to_period("M").astype(str)
-        agg_dict = {sales_col: "sum"}
-        if profit_col: agg_dict[profit_col] = "sum"
-        monthly = tmp.groupby("__month").agg(agg_dict).reset_index()
-        monthly = monthly.sort_values("__month")
-        result["monthly"] = {
-            "labels": monthly["__month"].tolist(),
-            "sales":  monthly[sales_col].round(2).tolist(),
-            "profit": monthly[profit_col].round(2).tolist() if profit_col else [],
-        }
-    else:
-        result["monthly"] = {"labels": [], "sales": [], "profit": []}
-
-    # ---- Top products ----
-    if prod_col and sales_col:
-        top = (df.groupby(prod_col)[sales_col].sum()
-                 .sort_values(ascending=False).head(10).round(2))
-        result["top_products"] = {"labels": top.index.tolist(), "values": top.values.tolist()}
-    else:
-        result["top_products"] = {"labels": [], "values": []}
-
-    # ---- Top customers ----
-    if cust_col and sales_col:
-        top = (df.groupby(cust_col)[sales_col].sum()
-                 .sort_values(ascending=False).head(10).round(2))
-        result["top_customers"] = {"labels": top.index.tolist(), "values": top.values.tolist()}
-    else:
-        result["top_customers"] = {"labels": [], "values": []}
-
-    # ---- Category ----
-    if cat_col and sales_col:
-        agg_dict = {sales_col: "sum"}
-        if profit_col: agg_dict[profit_col] = "sum"
-        cat = df.groupby(cat_col).agg(agg_dict).reset_index()
-        cat = cat.sort_values(sales_col, ascending=False)
-        result["category"] = {
-            "labels": cat[cat_col].tolist(),
-            "sales":  cat[sales_col].round(2).tolist(),
-            "profit": cat[profit_col].round(2).tolist() if profit_col else [],
-        }
-    else:
-        result["category"] = {"labels": [], "sales": [], "profit": []}
-
-    # ---- Region ----
-    if region_col and sales_col:
-        reg = (df.groupby(region_col)[sales_col].sum()
-                 .sort_values(ascending=False).round(2))
-        result["region"] = {"labels": reg.index.tolist(), "values": reg.values.tolist()}
-    else:
-        result["region"] = {"labels": [], "values": []}
-
-    # ---- Profit/Loss tracking ----
-    if profit_col:
-        profit_pos = float(df[df[profit_col] > 0][profit_col].sum())
-        profit_neg = float(df[df[profit_col] < 0][profit_col].sum())
-        result["profit_loss"] = {
-            "profit": round(profit_pos, 2),
-            "loss": round(abs(profit_neg), 2),
-            "net": round(profit_pos + profit_neg, 2),
-        }
-    else:
-        result["profit_loss"] = {"profit": 0, "loss": 0, "net": 0}
-
-    # ---- AI insights ----
-    result["insights"] = generate_insights(result)
-
-    # ---- Recent table sample ----
-    sample = df.head(50).copy()
-    if date_col:
-        sample[date_col] = sample[date_col].astype(str)
-    result["sample"] = {
-        "columns": sample.columns.tolist(),
-        "rows": sample.fillna("").astype(str).values.tolist(),
-    }
-
-    return result
-
-
-def generate_insights(a: dict) -> list:
-    """Rule-based AI-style business insights from computed analytics."""
-    out = []
-    k = a["kpi"]
-
-    if k["total_sales"] > 0:
-        out.append(f"📈 Total revenue generated: **${k['total_sales']:,.2f}** across {k['total_orders']:,} orders.")
-    if k["profit_margin"] > 0:
-        if k["profit_margin"] >= 20:
-            out.append(f"💰 Strong profit margin of **{k['profit_margin']:.1f}%** — well above industry average.")
-        elif k["profit_margin"] >= 10:
-            out.append(f"✅ Healthy profit margin of **{k['profit_margin']:.1f}%** .")
+    # Profit margin insight
+    profit_margin = kpis.get('profit_margin', 0)
+    if profit_margin > 0:
+        if profit_margin > 25:
+            insights.append({"icon": "📈", "title": "Healthy Profit Margin",
+                "text": f"Profit margin is {profit_margin:.1f}% — above industry average. Maintain pricing strategy and cost controls."})
+        elif profit_margin > 10:
+            insights.append({"icon": "⚠️", "title": "Moderate Margin Alert",
+                "text": f"Profit margin at {profit_margin:.1f}%. Consider reducing operational costs or revising pricing for low-margin SKUs."})
         else:
-            out.append(f"⚠️ Low profit margin of **{k['profit_margin']:.1f}%** — consider price/cost optimization.")
-    elif k["total_profit"] < 0:
-        out.append(f"🚨 Net loss detected: **${k['total_profit']:,.2f}** . Immediate review recommended.")
+            insights.append({"icon": "🔴", "title": "Low Margin Warning",
+                "text": f"Profit margin is only {profit_margin:.1f}%. Immediate cost audit recommended — identify and eliminate loss-making products."})
 
-    if a["top_products"]["labels"]:
-        p = a["top_products"]["labels"][0]
-        v = a["top_products"]["values"][0]
-        share = v / k["total_sales"] * 100 if k["total_sales"] else 0
-        out.append(f"🏆 Top product **{p}** alone contributes **{share:.1f}%** of total revenue (${v:,.2f}).")
+    # Top product insight
+    if top_products:
+        top = top_products[0]
+        insights.append({"icon": "🏆", "title": "Top Performer",
+            "text": f"'{top['name']}' leads with ${top['sales']:,.0f} in sales. Double down on this product through upselling and bundle campaigns."})
 
-    if a["top_customers"]["labels"]:
-        c = a["top_customers"]["labels"][0]
-        v = a["top_customers"]["values"][0]
-        out.append(f"👑 Highest-value customer: **{c}** with **${v:,.2f}** in purchases.")
+    # Category insight
+    if category_data:
+        top_cat = max(category_data, key=lambda x: x['sales'])
+        insights.append({"icon": "🗂️", "title": "Category Leader",
+            "text": f"'{top_cat['category']}' dominates with ${top_cat['sales']:,.0f} in revenue. Consider expanding inventory in this segment."})
 
-    if a["category"]["labels"]:
-        c = a["category"]["labels"][0]
-        v = a["category"]["sales"][0]
-        out.append(f"📦 Leading category: **{c}** generating **${v:,.2f}** .")
+    # Monthly trend
+    if len(monthly_data) >= 2:
+        last = monthly_data[-1]['revenue']
+        prev = monthly_data[-2]['revenue']
+        change = ((last - prev) / prev * 100) if prev > 0 else 0
+        if change > 5:
+            insights.append({"icon": "🚀", "title": "Positive MoM Trend",
+                "text": f"Revenue grew {change:.1f}% month-over-month. Momentum is building — invest in marketing to sustain growth."})
+        elif change < -5:
+            insights.append({"icon": "📉", "title": "Revenue Dip Detected",
+                "text": f"Revenue dropped {abs(change):.1f}% vs last month. Investigate demand signals and consider promotional campaigns."})
 
-    if a["region"]["labels"]:
-        r = a["region"]["labels"][0]
-        v = a["region"]["values"][0]
-        out.append(f"🌍 Best-performing region: **{r}** with **${v:,.2f}** in sales.")
+    # Orders per customer
+    avg_order = kpis.get('avg_order_value', 0)
+    if avg_order > 0:
+        insights.append({"icon": "🛒", "title": "Average Order Value",
+            "text": f"AOV is ${avg_order:,.2f}. "
+                    + ("Excellent — loyalty programs could push this even higher." if avg_order > 200 else "Consider cross-sell / upsell strategies to increase cart size.")})
 
-    if a["monthly"]["sales"] and len(a["monthly"]["sales"]) >= 2:
-        last = a["monthly"]["sales"][-1]
-        prev = a["monthly"]["sales"][-2]
-        if prev > 0:
-            change = (last - prev) / prev * 100
-            arrow = "📈" if change >= 0 else "📉"
-            out.append(f"{arrow} Month-over-month revenue change: **{change:+.1f}%** (latest: ${last:,.2f}).")
+    return insights[:6]
 
-    pl = a["profit_loss"]
-    if pl["loss"] > 0:
-        ratio = pl["loss"] / (pl["profit"] + 1e-9) * 100
-        out.append(f"⚠️ Loss-generating transactions total **${pl['loss']:,.2f}** ({ratio:.1f}% of profitable sales).")
-
-    if k["avg_order_value"] > 0:
-        out.append(f"🛒 Average order value: **${k['avg_order_value']:,.2f}** — useful benchmark for upsell targeting.")
-
-    return out
-
-
-# ------------------------------------------------------------------
-# Routes
-# ------------------------------------------------------------------
-@app.route("/")
+@app.route('/')
 def index():
-    with open("index.html", "r", encoding="utf-8") as f:
-        return render_template_string(f.read())
+    with open('index.html', 'r') as f:
+        return f.read()
 
-
-@app.route("/api/upload", methods=["POST"])
-def upload():
-    if "file" not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
-    file = request.files["file"]
-    if file.filename == "":
-        return jsonify({"error": "Empty filename"}), 400
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    global CURRENT_DATA
     try:
-        name = file.filename.lower()
-        if name.endswith(".csv"):
-            df = pd.read_csv(file, encoding_errors="ignore")
-        elif name.endswith((".xlsx", ".xls")):
-            df = pd.read_excel(file)
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        filename = file.filename.lower()
+        file_bytes = io.BytesIO(file.read())
+
+        if filename.endswith('.csv'):
+            try:
+                df = pd.read_csv(file_bytes, encoding='utf-8')
+            except:
+                file_bytes.seek(0)
+                df = pd.read_csv(file_bytes, encoding='latin1')
+        elif filename.endswith(('.xlsx', '.xls')):
+            df = pd.read_excel(file_bytes)
         else:
-            return jsonify({"error": "Use CSV or Excel only"}), 400
+            return jsonify({'error': 'Only CSV and Excel files supported'}), 400
 
         df = clean_dataframe(df)
-        if df.empty:
-            return jsonify({"error": "Dataset is empty after cleaning"}), 400
+        col_map = detect_columns(df)
+        df = parse_date_column(df, col_map['date'])
 
-        DATA_CACHE["df"] = df
-        DATA_CACHE["filename"] = file.filename
-        DATA_CACHE["uploaded_at"] = datetime.utcnow().isoformat()
+        CURRENT_DATA = {'df': df, 'col_map': col_map, 'filename': file.filename}
 
-        analytics = compute_analytics(df)
-        return jsonify({"ok": True, "filename": file.filename, "analytics": analytics})
-    except Exception as e:
-        return jsonify({"error": f"Failed to process: {e}"}), 500
-
-
-@app.route("/api/sample", methods=["POST"])
-def load_sample():
-    """Generate a realistic sample dataset (still 'real' — computed live from random walk)."""
-    rng = np.random.default_rng(42)
-    n = 1200
-    start = pd.Timestamp("2023-01-01")
-    dates = start + pd.to_timedelta(rng.integers(0, 730, n), unit="D")
-    categories = ["Electronics", "Furniture", "Clothing", "Books", "Beauty", "Sports", "Home"]
-    products = {
-        "Electronics": ["Laptop Pro", "Wireless Earbuds", "4K Monitor", "Gaming Mouse", "Smartphone"],
-        "Furniture":   ["Office Chair", "Standing Desk", "Bookshelf", "Sofa", "Lamp"],
-        "Clothing":    ["T-Shirt", "Jeans", "Jacket", "Sneakers", "Hat"],
-        "Books":       ["Novel", "Cookbook", "Biography", "Textbook", "Magazine"],
-        "Beauty":      ["Face Cream", "Lipstick", "Perfume", "Shampoo", "Mascara"],
-        "Sports":      ["Yoga Mat", "Dumbbells", "Tennis Racket", "Bicycle", "Running Shoes"],
-        "Home":        ["Bedsheet", "Cookware", "Curtains", "Vacuum", "Mug Set"],
-    }
-    regions = ["North America", "Europe", "Asia", "South America", "Africa", "Oceania"]
-    customers = [f"Customer {i:04d}" for i in range(1, 251)]
-
-    rows = []
-    for i in range(n):
-        cat = rng.choice(categories)
-        prod = rng.choice(products[cat])
-        qty  = int(rng.integers(1, 8))
-        price = round(float(rng.uniform(10, 800)), 2)
-        sales = round(price * qty, 2)
-        margin = float(rng.normal(0.18, 0.12))
-        profit = round(sales * margin, 2)
-        rows.append({
-            "Order ID":   f"ORD-{100000+i}",
-            "Order Date": dates[i].strftime("%Y-%m-%d"),
-            "Customer":   rng.choice(customers),
-            "Product":    prod,
-            "Category":   cat,
-            "Region":     rng.choice(regions),
-            "Quantity":   qty,
-            "Sales":      sales,
-            "Profit":     profit,
+        return jsonify({
+            'success': True,
+            'rows': len(df),
+            'columns': list(df.columns),
+            'col_map': col_map,
+            'filename': file.filename
         })
-    df = clean_dataframe(pd.DataFrame(rows))
-    DATA_CACHE["df"] = df
-    DATA_CACHE["filename"] = "sample_dataset.csv"
-    DATA_CACHE["uploaded_at"] = datetime.utcnow().isoformat()
-    return jsonify({"ok": True, "filename": "sample_dataset.csv",
-                    "analytics": compute_analytics(df)})
 
+    except Exception as e:
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
-@app.route("/api/analytics", methods=["GET"])
-def analytics():
-    if DATA_CACHE["df"] is None:
-        return jsonify({"error": "No data uploaded"}), 400
-    return jsonify({"ok": True, "analytics": compute_analytics(DATA_CACHE["df"])})
+@app.route('/analyze', methods=['GET'])
+def analyze():
+    global CURRENT_DATA
+    try:
+        if not CURRENT_DATA:
+            return jsonify({'error': 'No data loaded. Please upload a file first.'}), 400
 
+        df = CURRENT_DATA['df']
+        col_map = CURRENT_DATA['col_map']
 
-# ------------------------------------------------------------------
-# Excel export with live formulas
-# ------------------------------------------------------------------
-@app.route("/api/export/excel", methods=["GET"])
-def export_excel():
-    if DATA_CACHE["df"] is None:
-        return jsonify({"error": "No data uploaded"}), 400
+        sales_col    = col_map.get('sales')
+        profit_col   = col_map.get('profit')
+        quantity_col = col_map.get('quantity')
+        product_col  = col_map.get('product')
+        category_col = col_map.get('category')
+        region_col   = col_map.get('region')
+        customer_col = col_map.get('customer')
+        date_col     = col_map.get('date')
+        order_col    = col_map.get('order_id')
 
-    df = DATA_CACHE["df"].copy()
-    m = detect_columns(df)
+        # ── KPIs ──────────────────────────────────────────────────────────────
+        total_revenue = float(df[sales_col].sum()) if sales_col else 0
+        total_profit  = float(df[profit_col].sum()) if profit_col else 0
+        total_orders  = int(df[order_col].nunique()) if order_col else len(df)
+        total_qty     = int(df[quantity_col].sum()) if quantity_col else 0
+        profit_margin = (total_profit / total_revenue * 100) if total_revenue > 0 else 0
+        avg_order_val = (total_revenue / total_orders) if total_orders > 0 else 0
+        unique_customers = int(df[customer_col].nunique()) if customer_col else 0
+        unique_products  = int(df[product_col].nunique()) if product_col else 0
 
-    wb = Workbook()
+        kpis = {
+            'total_revenue': total_revenue,
+            'total_profit': total_profit,
+            'total_orders': total_orders,
+            'total_quantity': total_qty,
+            'profit_margin': round(profit_margin, 2),
+            'avg_order_value': round(avg_order_val, 2),
+            'unique_customers': unique_customers,
+            'unique_products': unique_products
+        }
 
-    header_font = Font(bold=True, color="FFFFFF", size=12)
-    header_fill = PatternFill("solid", fgColor="1F2937")
-    title_font  = Font(bold=True, size=16, color="1F2937")
-    kpi_font    = Font(bold=True, size=14, color="0F766E")
-    border = Border(left=Side(style="thin", color="D1D5DB"),
-                    right=Side(style="thin", color="D1D5DB"),
-                    top=Side(style="thin", color="D1D5DB"),
-                    bottom=Side(style="thin", color="D1D5DB"))
-    center = Alignment(horizontal="center", vertical="center")
+        # ── Monthly Revenue ───────────────────────────────────────────────────
+        monthly_data = []
+        if date_col and sales_col and pd.api.types.is_datetime64_any_dtype(df[date_col]):
+            df['_month'] = df[date_col].dt.to_period('M')
+            monthly = df.groupby('_month').agg(
+                revenue=(sales_col, 'sum'),
+                profit=(profit_col, 'sum') if profit_col else (sales_col, 'count')
+            ).reset_index()
+            monthly['_month'] = monthly['_month'].astype(str)
+            monthly_data = monthly.rename(columns={'_month': 'month'}).to_dict('records')
 
-    # ---------- Sheet 1: Summary with live formulas ----------
-    ws = wb.active
-    ws.title = "Summary"
-    ws["A1"] = "E-Commerce Analytics — Executive Summary"
-    ws["A1"].font = title_font
-    ws.merge_cells("A1:D1")
-    ws["A2"] = f"Generated: {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}"
-    ws["A3"] = f"Source file: {DATA_CACHE['filename']}"
+        # ── Top Products ──────────────────────────────────────────────────────
+        top_products = []
+        if product_col and sales_col:
+            tp = df.groupby(product_col)[sales_col].sum().sort_values(ascending=False).head(10)
+            top_products = [{'name': str(k), 'sales': round(float(v), 2)} for k, v in tp.items()]
 
-    sales_col_letter  = None
-    profit_col_letter = None
-    qty_col_letter    = None
-    n_rows = len(df) + 1
+        # ── Top Customers ─────────────────────────────────────────────────────
+        top_customers = []
+        if customer_col and sales_col:
+            tc = df.groupby(customer_col)[sales_col].sum().sort_values(ascending=False).head(10)
+            top_customers = [{'name': str(k), 'sales': round(float(v), 2)} for k, v in tc.items()]
 
-    # ---------- Sheet 2: Raw data ----------
-    ws_data = wb.create_sheet("Raw Data")
-    for c_idx, col_name in enumerate(df.columns, 1):
-        cell = ws_data.cell(row=1, column=c_idx, value=col_name)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = center
-        cell.border = border
-        if col_name == m.get("sales"):    sales_col_letter  = get_column_letter(c_idx)
-        if col_name == m.get("profit"):   profit_col_letter = get_column_letter(c_idx)
-        if col_name == m.get("quantity"): qty_col_letter    = get_column_letter(c_idx)
+        # ── Category Sales ────────────────────────────────────────────────────
+        category_data = []
+        if category_col and sales_col:
+            cat = df.groupby(category_col).agg(
+                sales=(sales_col, 'sum'),
+                orders=(order_col, 'nunique') if order_col else (sales_col, 'count')
+            ).reset_index()
+            cat = cat.sort_values('sales', ascending=False)
+            category_data = [{'category': str(r[category_col]), 'sales': round(float(r['sales']), 2),
+                               'orders': int(r['orders'])} for _, r in cat.iterrows()]
 
-    for r_idx, row in enumerate(df.itertuples(index=False), 2):
-        for c_idx, val in enumerate(row, 1):
-            if pd.isna(val): val = ""
-            elif isinstance(val, pd.Timestamp): val = val.strftime("%Y-%m-%d")
-            cell = ws_data.cell(row=r_idx, column=c_idx, value=val)
-            cell.border = border
+        # ── Regional Data ─────────────────────────────────────────────────────
+        region_data = []
+        if region_col and sales_col:
+            reg = df.groupby(region_col)[sales_col].sum().sort_values(ascending=False).head(15)
+            region_data = [{'region': str(k), 'sales': round(float(v), 2)} for k, v in reg.items()]
 
-    for col_idx, col_name in enumerate(df.columns, 1):
-        max_len = max(len(str(col_name)),
-                      df[col_name].astype(str).map(len).max() if len(df) else 10)
-        ws_data.column_dimensions[get_column_letter(col_idx)].width = min(max_len + 3, 30)
-    ws_data.freeze_panes = "A2"
+        # ── Profit by Category ────────────────────────────────────────────────
+        profit_category = []
+        if category_col and profit_col:
+            pc = df.groupby(category_col)[profit_col].sum().sort_values(ascending=False)
+            profit_category = [{'category': str(k), 'profit': round(float(v), 2)} for k, v in pc.items()]
 
-    # ---------- Live formula KPIs on Summary ----------
-    ws["A5"] = "Key Performance Indicators (Live Formulas)"
-    ws["A5"].font = Font(bold=True, size=13, color="1F2937")
-    ws.merge_cells("A5:D5")
+        # ── AI Insights ───────────────────────────────────────────────────────
+        ai_insights = generate_ai_insights(kpis, top_products, category_data, monthly_data)
 
-    kpis = [("Total Sales",   f"=SUM('Raw Data'!{sales_col_letter}2:{sales_col_letter}{n_rows})" if sales_col_letter else 0,  "$#,##0.00"),
-            ("Total Profit",  f"=SUM('Raw Data'!{profit_col_letter}2:{profit_col_letter}{n_rows})" if profit_col_letter else 0, "$#,##0.00"),
-            ("Total Quantity",f"=SUM('Raw Data'!{qty_col_letter}2:{qty_col_letter}{n_rows})" if qty_col_letter else 0, "#,##0"),
-            ("Order Count",   f"=COUNTA('Raw Data'!A2:A{n_rows})", "#,##0"),
-            ("Avg Order Value", f"=B6/B9" if sales_col_letter else 0, "$#,##0.00"),
-            ("Profit Margin %", f"=IFERROR(B7/B6,0)" if (sales_col_letter and profit_col_letter) else 0, "0.00%"),
-            ("Max Sale",      f"=MAX('Raw Data'!{sales_col_letter}2:{sales_col_letter}{n_rows})" if sales_col_letter else 0, "$#,##0.00"),
-            ("Min Sale",      f"=MIN('Raw Data'!{sales_col_letter}2:{sales_col_letter}{n_rows})" if sales_col_letter else 0, "$#,##0.00"),
-            ("Avg Profit",    f"=AVERAGE('Raw Data'!{profit_col_letter}2:{profit_col_letter}{n_rows})" if profit_col_letter else 0, "$#,##0.00"),
-            ]
+        return jsonify({
+            'kpis': kpis,
+            'monthly_data': monthly_data,
+            'top_products': top_products,
+            'top_customers': top_customers,
+            'category_data': category_data,
+            'region_data': region_data,
+            'profit_category': profit_category,
+            'ai_insights': ai_insights,
+            'col_map': col_map,
+            'filename': CURRENT_DATA.get('filename', '')
+        })
 
-    for i, (label, formula, fmt) in enumerate(kpis, start=6):
-        ws.cell(row=i, column=1, value=label).font = Font(bold=True)
-        c = ws.cell(row=i, column=2, value=formula)
-        c.font = kpi_font
-        c.number_format = fmt
-        c.border = border
-        ws.cell(row=i, column=1).border = border
-    ws.column_dimensions["A"].width = 22
-    ws.column_dimensions["B"].width = 22
+    except Exception as e:
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
-    # ---------- Sheet 3: Category breakdown ----------
-    if m.get("category") and m.get("sales"):
-        ws_cat = wb.create_sheet("Category Analysis")
-        ws_cat["A1"] = "Category"; ws_cat["B1"] = "Total Sales"; ws_cat["C1"] = "Total Profit"; ws_cat["D1"] = "Margin %"
-        for col in "ABCD":
-            ws_cat[f"{col}1"].font = header_font
-            ws_cat[f"{col}1"].fill = header_fill
-            ws_cat[f"{col}1"].alignment = center
+@app.route('/download/excel', methods=['GET'])
+def download_excel():
+    global CURRENT_DATA
+    try:
+        if not CURRENT_DATA:
+            return jsonify({'error': 'No data loaded'}), 400
 
-        cats = sorted(df[m["category"]].dropna().unique())
-        for i, cat in enumerate(cats, start=2):
-            ws_cat.cell(row=i, column=1, value=cat)
-            ws_cat.cell(row=i, column=2,
-                value=f"=SUMIF('Raw Data'!{get_column_letter(list(df.columns).index(m['category'])+1)}2:{get_column_letter(list(df.columns).index(m['category'])+1)}{n_rows},A{i},'Raw Data'!{sales_col_letter}2:{sales_col_letter}{n_rows})"
-            ).number_format = "$#,##0.00"
-            if profit_col_letter:
-                ws_cat.cell(row=i, column=3,
-                    value=f"=SUMIF('Raw Data'!{get_column_letter(list(df.columns).index(m['category'])+1)}2:{get_column_letter(list(df.columns).index(m['category'])+1)}{n_rows},A{i},'Raw Data'!{profit_col_letter}2:{profit_col_letter}{n_rows})"
-                ).number_format = "$#,##0.00"
-                ws_cat.cell(row=i, column=4, value=f"=IFERROR(C{i}/B{i},0)").number_format = "0.00%"
+        df = CURRENT_DATA['df']
+        col_map = CURRENT_DATA['col_map']
 
-        ws_cat.column_dimensions["A"].width = 20
-        for col in "BCD": ws_cat.column_dimensions[col].width = 18
+        output = io.BytesIO()
+        wb = openpyxl.Workbook()
 
-        # Chart
-        chart = BarChart()
-        chart.title = "Sales by Category"
-        chart.style = 11
-        chart.x_axis.title = "Category"
-        chart.y_axis.title = "Sales"
-        data = Reference(ws_cat, min_col=2, min_row=1, max_col=2, max_row=len(cats)+1)
-        cats_ref = Reference(ws_cat, min_col=1, min_row=2, max_row=len(cats)+1)
-        chart.add_data(data, titles_from_data=True)
-        chart.set_categories(cats_ref)
-        chart.height = 10; chart.width = 18
-        ws_cat.add_chart(chart, "F2")
+        # ── Summary Sheet ─────────────────────────────────────────────────────
+        ws = wb.active
+        ws.title = "Executive Summary"
 
-    # ---------- Sheet 4: Insights ----------
-    ws_ins = wb.create_sheet("AI Insights")
-    ws_ins["A1"] = "AI-Generated Business Insights"
-    ws_ins["A1"].font = title_font
-    ws_ins.merge_cells("A1:C1")
-    insights = generate_insights(compute_analytics(df))
-    for i, txt in enumerate(insights, start=3):
-        c = ws_ins.cell(row=i, column=1, value=txt.replace("**", ""))
-        c.alignment = Alignment(wrap_text=True, vertical="center")
-        ws_ins.row_dimensions[i].height = 28
-    ws_ins.column_dimensions["A"].width = 120
+        header_fill  = PatternFill("solid", fgColor="1a1a2e")
+        accent_fill  = PatternFill("solid", fgColor="0f3460")
+        kpi_fill     = PatternFill("solid", fgColor="16213e")
+        white_font   = Font(color="FFFFFF", bold=True, size=12)
+        accent_font  = Font(color="e94560", bold=True, size=11)
+        normal_font  = Font(color="FFFFFF", size=10)
+        center_align = Alignment(horizontal='center', vertical='center')
 
-    # Save to bytes
-    out = io.BytesIO()
-    wb.save(out)
-    out.seek(0)
-    filename = f"ecommerce_report_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.xlsx"
-    return send_file(out,
-                     mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                     as_attachment=True, download_name=filename)
+        ws.merge_cells('A1:F1')
+        ws['A1'] = "🛒 E-Commerce Analytics — Executive Report"
+        ws['A1'].font = Font(color="e94560", bold=True, size=16)
+        ws['A1'].alignment = center_align
+        ws['A1'].fill = header_fill
+        ws.row_dimensions[1].height = 35
 
+        ws.merge_cells('A2:F2')
+        ws['A2'] = f"Generated: {datetime.now().strftime('%B %d, %Y %H:%M')} | Source: {CURRENT_DATA.get('filename','')}"
+        ws['A2'].font = Font(color="aaaaaa", size=10)
+        ws['A2'].alignment = center_align
+        ws['A2'].fill = header_fill
 
-@app.route("/api/health")
+        # KPI section
+        sales_col   = col_map.get('sales')
+        profit_col  = col_map.get('profit')
+        order_col   = col_map.get('order_id')
+        product_col = col_map.get('product')
+        customer_col= col_map.get('customer')
+
+        total_revenue = float(df[sales_col].sum()) if sales_col else 0
+        total_profit  = float(df[profit_col].sum()) if profit_col else 0
+        total_orders  = int(df[order_col].nunique()) if order_col else len(df)
+        margin        = (total_profit/total_revenue*100) if total_revenue else 0
+
+        kpi_rows = [
+            ("Total Revenue",   f"${total_revenue:,.2f}"),
+            ("Total Profit",    f"${total_profit:,.2f}"),
+            ("Profit Margin",   f"{margin:.1f}%"),
+            ("Total Orders",    f"{total_orders:,}"),
+            ("Unique Customers",f"{int(df[customer_col].nunique()) if customer_col else 'N/A'}"),
+            ("Unique Products",  f"{int(df[product_col].nunique()) if product_col else 'N/A'}"),
+        ]
+
+        ws.append([])
+        ws.append(["KPI", "Value"])
+        for cell in ws[ws.max_row]:
+            cell.fill = accent_fill
+            cell.font = white_font
+            cell.alignment = center_align
+
+        for label, value in kpi_rows:
+            ws.append([label, value])
+            for cell in ws[ws.max_row]:
+                cell.fill = kpi_fill
+                cell.font = normal_font
+                cell.alignment = center_align
+
+        ws.column_dimensions['A'].width = 25
+        ws.column_dimensions['B'].width = 20
+
+        # ── Raw Data Sheet ────────────────────────────────────────────────────
+        ws2 = wb.create_sheet("Raw Data")
+        headers = list(df.columns)
+        ws2.append(headers)
+        for cell in ws2[1]:
+            cell.fill = header_fill
+            cell.font = white_font
+            cell.alignment = center_align
+
+        for _, row in df.head(5000).iterrows():
+            ws2.append([str(v) if pd.notna(v) else '' for v in row])
+
+        for i, col in enumerate(headers, 1):
+            ws2.column_dimensions[get_column_letter(i)].width = 18
+
+        # ── Top Products Sheet ────────────────────────────────────────────────
+        if col_map.get('product') and col_map.get('sales'):
+            ws3 = wb.create_sheet("Top Products")
+            ws3.append(["Rank", "Product", "Revenue", "% Share"])
+            for cell in ws3[1]:
+                cell.fill = header_fill; cell.font = white_font; cell.alignment = center_align
+            tp = df.groupby(col_map['product'])[col_map['sales']].sum().sort_values(ascending=False).head(20)
+            for i, (k, v) in enumerate(tp.items(), 1):
+                pct = v / total_revenue * 100 if total_revenue else 0
+                ws3.append([i, str(k), round(float(v), 2), f"{pct:.1f}%"])
+            for col_letter in ['A','B','C','D']:
+                ws3.column_dimensions[col_letter].width = 20
+
+        wb.save(output)
+        output.seek(0)
+        return send_file(output, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                         as_attachment=True, download_name='ecommerce_analytics_report.xlsx')
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/health', methods=['GET'])
 def health():
-    return jsonify({"status": "ok", "has_data": DATA_CACHE["df"] is not None})
+    return jsonify({'status': 'ok', 'version': '1.0.0'})
 
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
