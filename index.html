@@ -2,1021 +2,935 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NexusAI Analytics — E-Commerce Intelligence</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NexusAI — E-Commerce Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
 <style>
-:root {
-  --bg-deep:    #080b14;
-  --bg-mid:     #0d1220;
-  --bg-card:    rgba(255,255,255,0.04);
-  --bg-card-hover: rgba(255,255,255,0.07);
-  --border:     rgba(255,255,255,0.08);
-  --accent1:    #6c63ff;
-  --accent2:    #ff6584;
-  --accent3:    #43e97b;
-  --accent4:    #f7971e;
-  --text-primary:   #f0f2ff;
-  --text-secondary: #8892b0;
-  --text-muted:     #4a5568;
-  --sidebar-w: 240px;
-  --navbar-h:  64px;
-  --radius:    16px;
-  --shadow:    0 8px 32px rgba(0,0,0,0.4);
+:root{
+  --bg:#07090f;--bg2:#0c0f1a;--bg3:#111520;
+  --card:rgba(255,255,255,.03);--card-h:rgba(255,255,255,.06);
+  --border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --a1:#7c6fff;--a2:#ff6b8a;--a3:#3dffa0;--a4:#ffb347;--a5:#38d9f5;
+  --txt:#e8eaf6;--txt2:#8892b0;--txt3:#3d4560;
+  --sw:248px;--nh:62px;--r:14px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{
-  background:var(--bg-deep);
-  color:var(--text-primary);
-  font-family:'DM Sans',sans-serif;
-  min-height:100vh;
-  overflow-x:hidden;
-}
+body{background:var(--bg);color:var(--txt);font-family:'DM Sans',sans-serif;overflow-x:hidden}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--a1);border-radius:99px}
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar{width:5px;height:5px}
-::-webkit-scrollbar-track{background:var(--bg-deep)}
-::-webkit-scrollbar-thumb{background:var(--accent1);border-radius:99px}
+/* ── SIDEBAR ── */
+#sb{
+  position:fixed;top:0;left:0;width:var(--sw);height:100vh;
+  background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;z-index:200;transition:transform .3s;
+}
+.sb-logo{padding:20px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:11px}
+.sb-logo-icon{
+  width:38px;height:38px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--a1),var(--a2));
+  display:flex;align-items:center;justify-content:center;font-size:18px;
+}
+.sb-logo-name{font-family:'Syne',sans-serif;font-weight:800;font-size:15px}
+.sb-logo-sub{font-size:10px;color:var(--txt2);margin-top:1px}
+.sb-nav{flex:1;padding:14px 10px;overflow-y:auto}
+.sb-label{font-size:9.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--txt3);padding:10px 8px 4px}
+.ni{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;
+  cursor:pointer;font-size:13px;font-weight:500;color:var(--txt2);
+  transition:all .2s;margin-bottom:1px;border:1px solid transparent;
+}
+.ni:hover{background:var(--card-h);color:var(--txt)}
+.ni.on{background:rgba(124,111,255,.12);color:var(--a1);border-color:rgba(124,111,255,.2)}
+.ni-ic{font-size:15px;width:18px;text-align:center;flex-shrink:0}
+.ni-badge{margin-left:auto;font-size:9px;padding:2px 6px;border-radius:99px;background:var(--a2);color:#fff;font-weight:700}
+.sb-foot{padding:14px 10px;border-top:1px solid var(--border)}
+.btn-up{
+  width:100%;padding:9px;border-radius:9px;border:none;cursor:pointer;
+  background:linear-gradient(135deg,var(--a1),#9d94ff);
+  color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;
+  display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .2s;
+}
+.btn-up:hover{opacity:.85}
 
-/* ── Sidebar ── */
-#sidebar{
-  position:fixed;top:0;left:0;width:var(--sidebar-w);height:100vh;
-  background:var(--bg-mid);
-  border-right:1px solid var(--border);
-  display:flex;flex-direction:column;
-  z-index:100;
-  transition:transform .3s ease;
+/* ── NAVBAR ── */
+#nb{
+  position:fixed;top:0;left:var(--sw);right:0;height:var(--nh);
+  background:rgba(7,9,15,.9);backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border);z-index:190;
+  display:flex;align-items:center;padding:0 24px;gap:14px;
 }
-.sidebar-logo{
-  padding:24px 20px;
-  border-bottom:1px solid var(--border);
-  display:flex;align-items:center;gap:12px;
+#nb-title{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;flex:1}
+#nb-title span{color:var(--a1)}
+.nb-pill{
+  padding:5px 13px;border-radius:99px;font-size:12px;font-weight:600;
+  cursor:pointer;border:1px solid var(--border2);color:var(--txt2);background:transparent;
+  font-family:'DM Sans',sans-serif;transition:all .2s;
 }
-.logo-icon{
-  width:40px;height:40px;border-radius:12px;
-  background:linear-gradient(135deg,var(--accent1),var(--accent2));
+.nb-pill:hover,.nb-pill.on{background:var(--a1);color:#fff;border-color:var(--a1)}
+#live-dot{width:7px;height:7px;border-radius:50%;background:var(--txt3);flex-shrink:0}
+#live-dot.active{background:var(--a3);box-shadow:0 0 8px var(--a3);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+#nb-time{font-size:11px;color:var(--txt2)}
+#mb-toggle{display:none;background:none;border:none;color:var(--txt);font-size:22px;cursor:pointer;padding:4px}
+
+/* ── MAIN ── */
+#main{margin-left:var(--sw);padding-top:var(--nh);min-height:100vh}
+.pg{display:none;padding:24px;animation:fu .35s ease}
+.pg.on{display:block}
+@keyframes fu{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.ph{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:22px;flex-wrap:wrap;gap:12px}
+.ph-t{font-family:'Syne',sans-serif;font-size:21px;font-weight:700}
+.ph-t span{color:var(--a1)}
+.ph-s{color:var(--txt2);font-size:12.5px;margin-top:3px}
+
+/* ── UPLOAD ── */
+#upz{
+  max-width:640px;margin:50px auto;text-align:center;
+  border:2px dashed rgba(124,111,255,.3);border-radius:22px;
+  padding:58px 36px;background:rgba(124,111,255,.03);
+  cursor:pointer;transition:all .3s;position:relative;overflow:hidden;
+}
+#upz::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 0%,rgba(124,111,255,.09) 0%,transparent 70%);
+}
+#upz:hover,#upz.dov{border-color:var(--a1);background:rgba(124,111,255,.07);transform:translateY(-2px)}
+.up-icon{font-size:52px;margin-bottom:14px}
+.up-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700;margin-bottom:7px}
+.up-sub{color:var(--txt2);font-size:13.5px;line-height:1.7;margin-bottom:22px}
+.up-btn{
+  display:inline-flex;align-items:center;gap:8px;padding:11px 26px;border-radius:10px;
+  background:linear-gradient(135deg,var(--a1),#9d94ff);color:#fff;
+  font-weight:600;font-size:13.5px;border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;transition:all .2s;
+}
+.up-btn:hover{opacity:.9;transform:translateY(-1px)}
+.up-chips{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.chip{padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;border:1px solid var(--border2);color:var(--txt2)}
+#uprog{display:none;margin-top:18px}
+.pbar{height:3px;background:var(--border);border-radius:99px;overflow:hidden}
+.pbar-f{height:100%;width:0%;background:linear-gradient(90deg,var(--a1),var(--a2));transition:width .3s}
+.ptxt{font-size:11.5px;color:var(--txt2);margin-top:7px}
+
+/* ── DETECTION BADGE ── */
+#detect-banner{
+  display:none;background:rgba(61,255,160,.04);border:1px solid rgba(61,255,160,.15);
+  border-radius:12px;padding:14px 18px;margin-bottom:20px;
+}
+.det-title{font-size:12px;font-weight:600;color:var(--a3);margin-bottom:8px}
+.det-tags{display:flex;flex-wrap:wrap;gap:6px}
+.det-tag{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:99px;font-size:11px;font-weight:500;
+  background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.2);color:var(--a1);
+}
+.det-tag .arrow{color:var(--txt2)}
+.det-tag .orig{color:var(--txt2);font-size:10px}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:24px}
+.kc{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:18px;position:relative;overflow:hidden;transition:all .25s;cursor:default;
+}
+.kc:hover{background:var(--card-h);transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.35)}
+.kc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:var(--r) var(--r) 0 0}
+.kc.k1::before{background:linear-gradient(90deg,var(--a1),#9d94ff)}
+.kc.k2::before{background:linear-gradient(90deg,var(--a2),#ff9eb5)}
+.kc.k3::before{background:linear-gradient(90deg,var(--a3),#06d6a0)}
+.kc.k4::before{background:linear-gradient(90deg,var(--a4),#f5d020)}
+.kc.k5::before{background:linear-gradient(90deg,var(--a5),#818cf8)}
+.kc.k6::before{background:linear-gradient(90deg,#e879f9,#a855f7)}
+.kc.k7::before{background:linear-gradient(90deg,#34d399,#059669)}
+.kc.k8::before{background:linear-gradient(90deg,#fb923c,#f59e0b)}
+.kc.k9::before{background:linear-gradient(90deg,#f472b6,#ec4899)}
+.kc.k10::before{background:linear-gradient(90deg,#60a5fa,#3b82f6)}
+.kc.k11::before{background:linear-gradient(90deg,#a78bfa,#7c3aed)}
+.kc-icon{position:absolute;right:14px;top:14px;font-size:22px;opacity:.2}
+.kc-label{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--txt2);margin-bottom:8px}
+.kc-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1;margin-bottom:5px}
+.kc-sub{font-size:11px;color:var(--txt3)}
+.kc-change{
+  display:inline-flex;align-items:center;gap:3px;
+  font-size:10.5px;font-weight:600;margin-top:4px;padding:2px 6px;border-radius:99px;
+}
+.kc-change.up{background:rgba(61,255,160,.1);color:var(--a3)}
+.kc-change.dn{background:rgba(255,107,138,.1);color:var(--a2)}
+
+/* ── CARDS ── */
+.gc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.gc-h{padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.gc-t{font-family:'Syne',sans-serif;font-size:14px;font-weight:700}
+.gc-b{font-size:10px;padding:3px 8px;border-radius:99px;font-weight:600;background:rgba(124,111,255,.12);color:var(--a1)}
+.gc-body{padding:18px}
+
+/* ── GRID LAYOUTS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:18px}
+.g1{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:18px}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:18px}
+.g12{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:18px}
+@media(max-width:1000px){.g3,.g2,.g21,.g12{grid-template-columns:1fr}}
+@media(max-width:700px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.ch{min-height:280px}
+
+/* ── TABLE ── */
+.dt{width:100%;border-collapse:collapse;font-size:12.5px}
+.dt th{text-align:left;padding:9px 12px;font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--txt3);border-bottom:1px solid var(--border)}
+.dt td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.03);color:var(--txt2);vertical-align:middle}
+.dt tr:hover td{background:var(--card-h);color:var(--txt)}
+.dt tr:last-child td{border-bottom:none}
+.rk{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;font-size:10px;font-weight:700}
+.rk1{background:rgba(255,179,71,.12);color:var(--a4)}
+.rk2{background:rgba(124,111,255,.12);color:var(--a1)}
+.rk3{background:rgba(255,107,138,.12);color:var(--a2)}
+.rkn{background:var(--card);color:var(--txt3)}
+.mbar-wrap{display:flex;align-items:center;gap:7px}
+.mbar{height:3px;border-radius:99px;background:linear-gradient(90deg,var(--a1),var(--a2));flex-shrink:0}
+.tag{display:inline-block;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600}
+.tag-g{background:rgba(61,255,160,.1);color:var(--a3)}
+.tag-r{background:rgba(255,107,138,.1);color:var(--a2)}
+.tag-y{background:rgba(255,179,71,.1);color:var(--a4)}
+
+/* ── AI INSIGHTS ── */
+.ins-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.ins-card{
+  background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px;
+  transition:all .2s;border-left:3px solid var(--a1);
+}
+.ins-card:nth-child(2){border-left-color:var(--a2)}
+.ins-card:nth-child(3){border-left-color:var(--a3)}
+.ins-card:nth-child(4){border-left-color:var(--a4)}
+.ins-card:nth-child(5){border-left-color:var(--a5)}
+.ins-card:nth-child(6){border-left-color:#e879f9}
+.ins-card:nth-child(7){border-left-color:#34d399}
+.ins-card:nth-child(8){border-left-color:#fb923c}
+.ins-card:hover{background:var(--card-h);transform:translateY(-2px)}
+.ins-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.ins-icon{font-size:20px}
+.ins-val{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--a1)}
+.ins-title{font-family:'Syne',sans-serif;font-size:12.5px;font-weight:700;margin-bottom:5px}
+.ins-text{font-size:12px;color:var(--txt2);line-height:1.6}
+
+/* ── SUMMARY ── */
+.sum-hero{
+  background:linear-gradient(135deg,rgba(124,111,255,.08),rgba(255,107,138,.06));
+  border:1px solid rgba(124,111,255,.15);border-radius:var(--r);
+  padding:24px;margin-bottom:18px;position:relative;overflow:hidden;
+}
+.sum-hero::before{
+  content:'';position:absolute;top:-30px;right:-30px;
+  width:150px;height:150px;border-radius:50%;
+  background:radial-gradient(circle,rgba(124,111,255,.12),transparent 70%);
+}
+.sum-headline{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;line-height:1.4;margin-bottom:8px}
+.sum-headline span{color:var(--a1)}
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}
+@media(max-width:700px){.sum-grid{grid-template-columns:1fr}}
+.sum-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+.sum-card-title{font-family:'Syne',sans-serif;font-size:12.5px;font-weight:700;color:var(--a1);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.sum-point{font-size:12.5px;color:var(--txt2);padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);line-height:1.5}
+.sum-point:last-child{border-bottom:none}
+.sum-point strong,.sum-point b{color:var(--txt);font-weight:600}
+.rec-list{display:flex;flex-direction:column;gap:8px}
+.rec-item{
+  display:flex;align-items:flex-start;gap:10px;
+  background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;
+  font-size:12.5px;color:var(--txt2);line-height:1.5;
+}
+.rec-num{
+  width:22px;height:22px;border-radius:6px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--a1),var(--a2));
   display:flex;align-items:center;justify-content:center;
-  font-size:20px;flex-shrink:0;
+  font-size:11px;font-weight:700;color:#fff;margin-top:1px;
 }
-.logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:15px;line-height:1.2}
-.logo-sub{color:var(--text-secondary);font-size:10px;font-weight:400}
+.col-map-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.col-map-item{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:99px;font-size:11px;
+  background:rgba(61,255,160,.07);border:1px solid rgba(61,255,160,.15);color:var(--a3);
+}
+.col-map-arrow{color:var(--txt3)}
 
-.sidebar-nav{flex:1;padding:16px 12px;overflow-y:auto}
-.nav-section-label{
-  font-size:10px;font-weight:600;letter-spacing:.1em;
-  color:var(--text-muted);text-transform:uppercase;
-  padding:8px 8px 4px;margin-top:8px;
-}
-.nav-item{
-  display:flex;align-items:center;gap:12px;
-  padding:10px 12px;border-radius:10px;
-  cursor:pointer;font-size:13.5px;font-weight:500;
-  color:var(--text-secondary);
-  transition:all .2s;margin-bottom:2px;
-  border:1px solid transparent;
-  text-decoration:none;
-}
-.nav-item:hover{background:var(--bg-card);color:var(--text-primary)}
-.nav-item.active{
-  background:rgba(108,99,255,.15);
-  color:var(--accent1);
-  border-color:rgba(108,99,255,.25);
-}
-.nav-item .ni{font-size:16px;width:20px;text-align:center}
-.nav-badge{
-  margin-left:auto;font-size:10px;padding:2px 7px;
-  border-radius:99px;background:var(--accent2);color:#fff;font-weight:600;
-}
-
-.sidebar-footer{
-  padding:16px 12px;border-top:1px solid var(--border);
-}
-.upload-btn-side{
-  width:100%;padding:10px;border-radius:10px;
-  background:linear-gradient(135deg,var(--accent1),#8b85ff);
-  border:none;color:#fff;font-family:'DM Sans',sans-serif;
-  font-size:13px;font-weight:600;cursor:pointer;
-  transition:opacity .2s;display:flex;align-items:center;
-  justify-content:center;gap:8px;
-}
-.upload-btn-side:hover{opacity:.85}
-
-/* ── Navbar ── */
-#navbar{
-  position:fixed;top:0;left:var(--sidebar-w);right:0;height:var(--navbar-h);
-  background:rgba(8,11,20,.85);
-  backdrop-filter:blur(20px);
-  border-bottom:1px solid var(--border);
-  display:flex;align-items:center;padding:0 28px;
-  gap:16px;z-index:99;
-}
-.navbar-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;flex:1}
-.navbar-title span{color:var(--accent1)}
-.nav-pill{
-  padding:6px 14px;border-radius:99px;font-size:12px;font-weight:600;
-  cursor:pointer;transition:all .2s;border:1px solid var(--border);
-  color:var(--text-secondary);background:transparent;font-family:'DM Sans',sans-serif;
-}
-.nav-pill:hover,.nav-pill.active-pill{
-  background:var(--accent1);color:#fff;border-color:var(--accent1);
-}
-.status-dot{
-  width:8px;height:8px;border-radius:50%;
-  background:var(--accent3);animation:pulse 2s infinite;flex-shrink:0;
-}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(67,233,123,.4)}50%{box-shadow:0 0 0 5px transparent}}
-.navbar-time{font-size:12px;color:var(--text-secondary)}
-
-/* ── Main Content ── */
-#main{
-  margin-left:var(--sidebar-w);
-  padding-top:var(--navbar-h);
-  min-height:100vh;
-}
-.page-section{
-  display:none;padding:28px;
-  animation:fadeUp .4s ease;
-}
-.page-section.active-section{display:block}
-@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
-
-.section-header{
-  display:flex;align-items:center;justify-content:space-between;
-  margin-bottom:24px;flex-wrap:wrap;gap:12px;
-}
-.section-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:700}
-.section-title span{color:var(--accent1)}
-.section-subtitle{color:var(--text-secondary);font-size:13px;margin-top:2px}
-
-/* ── Upload Zone ── */
-#upload-zone{
-  max-width:680px;margin:60px auto;text-align:center;
-  border:2px dashed rgba(108,99,255,.4);border-radius:24px;
-  padding:64px 40px;
-  background:rgba(108,99,255,.04);
-  cursor:pointer;transition:all .3s;position:relative;
-  overflow:hidden;
-}
-#upload-zone::before{
-  content:'';position:absolute;inset:0;
-  background:radial-gradient(ellipse at 50% 0%, rgba(108,99,255,.1) 0%, transparent 70%);
-  pointer-events:none;
-}
-#upload-zone:hover,#upload-zone.drag-over{
-  border-color:var(--accent1);
-  background:rgba(108,99,255,.08);
-  transform:translateY(-2px);
-}
-.upload-icon{font-size:56px;margin-bottom:16px;display:block}
-.upload-title{font-family:'Syne',sans-serif;font-size:24px;font-weight:700;margin-bottom:8px}
-.upload-sub{color:var(--text-secondary);font-size:14px;line-height:1.6;margin-bottom:24px}
-.upload-formats{
-  display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:16px;
-}
-.format-chip{
-  padding:4px 12px;border-radius:99px;font-size:11px;font-weight:600;
-  border:1px solid var(--border);color:var(--text-secondary);
-}
-#file-input{display:none}
-.upload-cta{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:12px 28px;border-radius:12px;
-  background:linear-gradient(135deg,var(--accent1),#8b85ff);
-  color:#fff;font-weight:600;font-size:14px;
-  border:none;cursor:pointer;font-family:'DM Sans',sans-serif;
-  transition:all .2s;
-}
-.upload-cta:hover{opacity:.9;transform:translateY(-1px)}
-#upload-progress{
-  margin-top:20px;display:none;
-}
-.progress-bar-wrap{
-  height:4px;background:var(--border);border-radius:99px;overflow:hidden;
-  width:100%;
-}
-.progress-bar-fill{
-  height:100%;width:0%;
-  background:linear-gradient(90deg,var(--accent1),var(--accent2));
-  border-radius:99px;transition:width .3s;
-}
-.progress-text{font-size:12px;color:var(--text-secondary);margin-top:8px}
-
-/* ── KPI Cards ── */
-.kpi-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
-  gap:16px;margin-bottom:28px;
-}
-.kpi-card{
-  background:var(--bg-card);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:20px;
-  position:relative;overflow:hidden;
-  transition:all .25s;cursor:default;
-}
-.kpi-card:hover{
-  background:var(--bg-card-hover);
-  transform:translateY(-3px);
-  box-shadow:var(--shadow);
-}
-.kpi-card::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:2px;
-}
-.kpi-card.c1::before{background:linear-gradient(90deg,var(--accent1),#8b85ff)}
-.kpi-card.c2::before{background:linear-gradient(90deg,var(--accent2),#ff8fab)}
-.kpi-card.c3::before{background:linear-gradient(90deg,var(--accent3),#06d6a0)}
-.kpi-card.c4::before{background:linear-gradient(90deg,var(--accent4),#f5d020)}
-.kpi-card.c5::before{background:linear-gradient(90deg,#38bdf8,#818cf8)}
-.kpi-card.c6::before{background:linear-gradient(90deg,#e879f9,#a855f7)}
-.kpi-card.c7::before{background:linear-gradient(90deg,#34d399,#059669)}
-.kpi-card.c8::before{background:linear-gradient(90deg,#fb923c,#f59e0b)}
-
-.kpi-label{font-size:11px;font-weight:600;letter-spacing:.06em;color:var(--text-secondary);text-transform:uppercase;margin-bottom:10px}
-.kpi-value{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;line-height:1;margin-bottom:6px}
-.kpi-sub{font-size:11px;color:var(--text-muted)}
-.kpi-icon{
-  position:absolute;right:16px;top:16px;
-  font-size:24px;opacity:.25;
-}
-
-/* ── Glass Cards ── */
-.glass-card{
-  background:var(--bg-card);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  overflow:hidden;
-}
-.card-header{
-  padding:18px 20px;
-  border-bottom:1px solid var(--border);
-  display:flex;align-items:center;justify-content:space-between;
-}
-.card-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:700}
-.card-badge{
-  font-size:10px;padding:3px 8px;border-radius:99px;
-  background:rgba(108,99,255,.15);color:var(--accent1);font-weight:600;
-}
-.card-body{padding:20px}
-
-/* ── Charts Grid ── */
-.charts-row{
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:16px;margin-bottom:20px;
-}
-.charts-row.triple{grid-template-columns:1fr 1fr 1fr}
-.charts-row.solo{grid-template-columns:1fr}
-@media(max-width:900px){
-  .charts-row,.charts-row.triple{grid-template-columns:1fr}
-}
-.chart-container{min-height:300px}
-
-/* ── Tables ── */
-.data-table{width:100%;border-collapse:collapse;font-size:13px}
-.data-table th{
-  text-align:left;padding:10px 14px;
-  font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
-  color:var(--text-muted);border-bottom:1px solid var(--border);
-}
-.data-table td{
-  padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.04);
-  color:var(--text-secondary);
-}
-.data-table tr:hover td{background:var(--bg-card-hover);color:var(--text-primary)}
-.rank-badge{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:22px;height:22px;border-radius:6px;
-  font-size:11px;font-weight:700;
-}
-.rank-1{background:rgba(247,151,30,.15);color:var(--accent4)}
-.rank-2{background:rgba(108,99,255,.15);color:var(--accent1)}
-.rank-3{background:rgba(255,101,132,.15);color:var(--accent2)}
-.rank-other{background:var(--bg-card);color:var(--text-muted)}
-.bar-cell{display:flex;align-items:center;gap:8px}
-.mini-bar{
-  height:4px;border-radius:99px;min-width:2px;
-  background:linear-gradient(90deg,var(--accent1),var(--accent2));
-  transition:width .5s ease;
-}
-
-/* ── AI Insights ── */
-.insights-grid{
-  display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
-  gap:14px;
-}
-.insight-card{
-  background:var(--bg-card);border:1px solid var(--border);
-  border-radius:12px;padding:16px;transition:all .2s;
-  border-left:3px solid var(--accent1);
-}
-.insight-card:nth-child(2){border-left-color:var(--accent2)}
-.insight-card:nth-child(3){border-left-color:var(--accent3)}
-.insight-card:nth-child(4){border-left-color:var(--accent4)}
-.insight-card:nth-child(5){border-left-color:#38bdf8}
-.insight-card:nth-child(6){border-left-color:#e879f9}
-.insight-card:hover{background:var(--bg-card-hover);transform:translateY(-2px)}
-.insight-icon{font-size:22px;margin-bottom:8px}
-.insight-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;margin-bottom:6px}
-.insight-text{font-size:12.5px;color:var(--text-secondary);line-height:1.6}
-
-/* ── Download Buttons ── */
-.dl-row{display:flex;gap:10px;flex-wrap:wrap}
+/* ── DL BUTTONS ── */
+.dl-row{display:flex;gap:9px;flex-wrap:wrap}
 .dl-btn{
-  display:inline-flex;align-items:center;gap:8px;
-  padding:10px 18px;border-radius:10px;border:1px solid var(--border);
-  background:var(--bg-card);color:var(--text-primary);
-  font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;
-  font-family:'DM Sans',sans-serif;
+  display:inline-flex;align-items:center;gap:7px;padding:9px 16px;
+  border-radius:9px;border:1px solid var(--border2);background:var(--card);
+  color:var(--txt);font-size:12.5px;font-weight:600;cursor:pointer;
+  transition:all .2s;font-family:'DM Sans',sans-serif;
 }
-.dl-btn:hover{border-color:var(--accent1);color:var(--accent1)}
-.dl-btn.primary{
-  background:linear-gradient(135deg,var(--accent3),#06d6a0);
-  border-color:transparent;color:#000;
-}
-.dl-btn.primary:hover{opacity:.9;color:#000}
+.dl-btn:hover{border-color:var(--a1);color:var(--a1)}
+.dl-btn.prim{background:linear-gradient(135deg,var(--a3),#06d6a0);border:none;color:#000}
+.dl-btn.prim:hover{opacity:.9;color:#000}
 
-/* ── Empty / Loading states ── */
-.empty-state{
-  text-align:center;padding:60px 20px;
-  color:var(--text-secondary);
-}
-.empty-icon{font-size:48px;margin-bottom:12px}
-.empty-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;margin-bottom:6px}
+/* ── EMPTY / LOADER ── */
+.empty{text-align:center;padding:50px 20px;color:var(--txt2)}
+.empty-i{font-size:42px;margin-bottom:10px}
+.empty-t{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;margin-bottom:5px}
+.spin{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:50px}
+.spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--a1);animation:sp .75s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
 
-.loader{
-  display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:16px;padding:60px;
-}
-.spinner{
-  width:40px;height:40px;border-radius:50%;
-  border:3px solid var(--border);
-  border-top-color:var(--accent1);
-  animation:spin .8s linear infinite;
-}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* ── Toast ── */
+/* ── TOAST ── */
 #toast{
-  position:fixed;bottom:24px;right:24px;
-  background:var(--bg-mid);border:1px solid var(--border);
-  border-radius:12px;padding:12px 18px;
-  font-size:13px;z-index:9999;
-  transform:translateY(80px);opacity:0;
-  transition:all .35s cubic-bezier(.34,1.56,.64,1);
-  max-width:300px;display:flex;align-items:center;gap:10px;
+  position:fixed;bottom:22px;right:22px;
+  background:var(--bg2);border:1px solid var(--border2);border-radius:11px;
+  padding:11px 16px;font-size:12.5px;z-index:9999;max-width:290px;
+  display:flex;align-items:center;gap:9px;
+  transform:translateY(70px);opacity:0;
+  transition:all .3s cubic-bezier(.34,1.56,.64,1);
 }
 #toast.show{transform:translateY(0);opacity:1}
-#toast.success{border-left:3px solid var(--accent3)}
-#toast.error{border-left:3px solid var(--accent2)}
+#toast.ok{border-left:3px solid var(--a3)}
+#toast.err{border-left:3px solid var(--a2)}
+#file-input{display:none}
 
-/* ── Skeleton ── */
-.skeleton{
-  background:linear-gradient(90deg,var(--bg-card) 25%,rgba(255,255,255,.06) 50%,var(--bg-card) 75%);
-  background-size:200% 100%;
-  animation:shimmer 1.5s infinite;
-  border-radius:6px;
-}
-@keyframes shimmer{to{background-position:-200% 0}}
-
-/* ── Mobile ── */
-#menu-toggle{display:none;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px}
+/* ── MOBILE ── */
 @media(max-width:768px){
-  #sidebar{transform:translateX(-100%)}
-  #sidebar.open{transform:translateX(0)}
-  #main{margin-left:0}
-  #navbar{left:0}
-  #menu-toggle{display:block}
-  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  #sb{transform:translateX(-100%)}
+  #sb.open{transform:translateX(0)}
+  #main{margin-left:0}#nb{left:0}
+  #mb-toggle{display:block}
 }
 </style>
 </head>
 <body>
 
-<!-- Sidebar -->
-<aside id="sidebar">
-  <div class="sidebar-logo">
-    <div class="logo-icon">⚡</div>
-    <div>
-      <div class="logo-text">NexusAI</div>
-      <div class="logo-sub">Analytics Platform</div>
-    </div>
+<!-- SIDEBAR -->
+<aside id="sb">
+  <div class="sb-logo">
+    <div class="sb-logo-icon">⚡</div>
+    <div><div class="sb-logo-name">NexusAI</div><div class="sb-logo-sub">Analytics Platform</div></div>
   </div>
-  <nav class="sidebar-nav">
-    <div class="nav-section-label">Overview</div>
-    <div class="nav-item active" data-section="overview">
-      <span class="ni">🏠</span> Dashboard
-    </div>
-    <div class="nav-item" data-section="trends">
-      <span class="ni">📈</span> Revenue Trends
-    </div>
-    <div class="nav-section-label">Products</div>
-    <div class="nav-item" data-section="products">
-      <span class="ni">📦</span> Top Products
-    </div>
-    <div class="nav-item" data-section="categories">
-      <span class="ni">🗂️</span> Categories
-    </div>
-    <div class="nav-section-label">Audience</div>
-    <div class="nav-item" data-section="customers">
-      <span class="ni">👥</span> Customers
-    </div>
-    <div class="nav-item" data-section="regions">
-      <span class="ni">🌍</span> Regional
-    </div>
-    <div class="nav-section-label">Intelligence</div>
-    <div class="nav-item" data-section="insights">
-      <span class="ni">🤖</span> AI Insights
-    </div>
-    <div class="nav-item" data-section="reports">
-      <span class="ni">📥</span> Reports
-    </div>
+  <nav class="sb-nav" id="sb-nav">
+    <div class="sb-label">Overview</div>
+    <div class="ni on" data-p="overview"><span class="ni-ic">🏠</span>Dashboard</div>
+    <div class="ni" data-p="trends"><span class="ni-ic">📈</span>Revenue Trends</div>
+    <div class="sb-label">Products & Sales</div>
+    <div class="ni" data-p="products"><span class="ni-ic">📦</span>Top Products</div>
+    <div class="ni" data-p="categories"><span class="ni-ic">🗂️</span>Categories</div>
+    <div class="sb-label">Audience</div>
+    <div class="ni" data-p="customers"><span class="ni-ic">👥</span>Customers</div>
+    <div class="ni" data-p="regions"><span class="ni-ic">🌍</span>Regional</div>
+    <div class="sb-label">Intelligence</div>
+    <div class="ni" data-p="insights"><span class="ni-ic">🤖</span>AI Insights</div>
+    <div class="ni" data-p="summary"><span class="ni-ic">📋</span>Executive Summary</div>
+    <div class="ni" data-p="reports"><span class="ni-ic">📥</span>Reports</div>
   </nav>
-  <div class="sidebar-footer">
-    <button class="upload-btn-side" onclick="triggerUpload()">
-      ⬆️ Upload Dataset
-    </button>
+  <div class="sb-foot">
+    <button class="btn-up" onclick="trigUp()">⬆️ Upload Dataset</button>
   </div>
 </aside>
 
-<!-- Navbar -->
-<nav id="navbar">
-  <button id="menu-toggle" onclick="toggleSidebar()">☰</button>
-  <div class="navbar-title">E-Commerce <span>Analytics</span></div>
-  <button class="nav-pill active-pill" onclick="triggerUpload()">+ New Dataset</button>
-  <div class="status-dot" id="status-dot" style="background:var(--text-muted)"></div>
-  <div class="navbar-time" id="navbar-time"></div>
+<!-- NAVBAR -->
+<nav id="nb">
+  <button id="mb-toggle" onclick="document.getElementById('sb').classList.toggle('open')">☰</button>
+  <div id="nb-title">E-Commerce <span>Analytics</span></div>
+  <button class="nb-pill" onclick="trigUp()">+ Upload</button>
+  <div id="live-dot"></div>
+  <div id="nb-time"></div>
 </nav>
 
-<!-- Main -->
 <main id="main">
-  <input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="handleFile(event)">
+<input type="file" id="file-input" accept=".csv,.xlsx,.xls" onchange="handleFile(event)">
 
-  <!-- OVERVIEW -->
-  <section class="page-section active-section" id="sec-overview">
-    <div id="upload-wrapper">
-      <div class="section-header">
-        <div>
-          <div class="section-title">Welcome to <span>NexusAI</span></div>
-          <div class="section-subtitle">Upload your e-commerce dataset to get started</div>
-        </div>
+<!-- ── OVERVIEW ── -->
+<section class="pg on" id="pg-overview">
+  <div id="upwrap">
+    <div class="ph"><div><div class="ph-t">Welcome to <span>NexusAI</span></div><div class="ph-s">Upload any CSV or Excel dataset to begin</div></div></div>
+    <div id="upz" onclick="trigUp()" ondrop="onDrop(event)" ondragover="onDOver(event)" ondragleave="onDLeave(event)">
+      <div class="up-icon">🛒</div>
+      <div class="up-title">Drop your dataset here</div>
+      <div class="up-sub">Upload any e-commerce dataset — orders, sales, customers, products,<br>categories, regions. AI will auto-detect all columns.</div>
+      <button class="up-btn" onclick="event.stopPropagation();trigUp()">📂 Choose File</button>
+      <div class="up-chips">
+        <span class="chip">.CSV</span><span class="chip">.XLSX</span><span class="chip">.XLS</span>
+        <span class="chip">Smart Detection</span><span class="chip">AI Insights</span>
       </div>
-      <div id="upload-zone" onclick="triggerUpload()" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
-        <span class="upload-icon">🛒</span>
-        <div class="upload-title">Drop your dataset here</div>
-        <div class="upload-sub">Upload any CSV or Excel file with orders, sales, customers,<br>products, categories, and regional data.</div>
-        <button class="upload-cta" onclick="event.stopPropagation();triggerUpload()">
-          📂 Choose File
-        </button>
-        <div class="upload-formats">
-          <span class="format-chip">.CSV</span>
-          <span class="format-chip">.XLSX</span>
-          <span class="format-chip">.XLS</span>
-          <span class="format-chip">Auto-Clean</span>
-          <span class="format-chip">AI Insights</span>
-        </div>
-        <div id="upload-progress">
-          <div class="progress-bar-wrap"><div class="progress-bar-fill" id="pb"></div></div>
-          <div class="progress-text" id="progress-text">Uploading…</div>
-        </div>
+      <div id="uprog">
+        <div class="pbar"><div class="pbar-f" id="pbf"></div></div>
+        <div class="ptxt" id="ptxt">Uploading…</div>
       </div>
     </div>
-    <div id="dashboard-content" style="display:none">
-      <div class="section-header">
-        <div>
-          <div class="section-title">Executive <span>Overview</span></div>
-          <div class="section-subtitle" id="data-subtitle">Loading dataset info…</div>
-        </div>
-        <div class="dl-row">
-          <button class="dl-btn primary" onclick="downloadExcel()">📥 Export Excel</button>
-        </div>
+  </div>
+  <div id="dash" style="display:none">
+    <div class="ph">
+      <div>
+        <div class="ph-t">Executive <span>Overview</span></div>
+        <div class="ph-s" id="ph-sub">Loading…</div>
       </div>
-      <div class="kpi-grid" id="kpi-grid"></div>
-      <div class="charts-row">
-        <div class="glass-card">
-          <div class="card-header"><span class="card-title">📈 Revenue vs Profit Trend</span><span class="card-badge">Monthly</span></div>
-          <div class="card-body"><div class="chart-container" id="chart-revenue-trend"></div></div>
-        </div>
-        <div class="glass-card">
-          <div class="card-header"><span class="card-title">🍩 Revenue by Category</span><span class="card-badge">Share</span></div>
-          <div class="card-body"><div class="chart-container" id="chart-cat-donut"></div></div>
-        </div>
+      <div class="dl-row">
+        <button class="dl-btn prim" onclick="dlExcel()">📥 Export Excel</button>
       </div>
     </div>
-  </section>
+    <div id="detect-banner">
+      <div class="det-title">🔍 Auto-Detected Columns</div>
+      <div class="det-tags" id="det-tags"></div>
+    </div>
+    <div class="kpi-grid" id="kpi-grid"></div>
+    <div class="g2">
+      <div class="gc"><div class="gc-h"><span class="gc-t">📈 Revenue & Profit Trend</span><span class="gc-b">Monthly</span></div><div class="gc-body"><div class="ch" id="ch-trend"></div></div></div>
+      <div class="gc"><div class="gc-h"><span class="gc-t">🍩 Revenue by Category</span><span class="gc-b">Share</span></div><div class="gc-body"><div class="ch" id="ch-catdona"></div></div></div>
+    </div>
+    <div class="g3">
+      <div class="gc"><div class="gc-h"><span class="gc-t">🏆 Top 5 Products</span></div><div class="gc-body"><div class="ch" id="ch-top5prod"></div></div></div>
+      <div class="gc"><div class="gc-h"><span class="gc-t">🌍 Top Regions</span></div><div class="gc-body"><div class="ch" id="ch-top5reg"></div></div></div>
+      <div class="gc"><div class="gc-h"><span class="gc-t">🚚 Ship Mode Split</span></div><div class="gc-body"><div class="ch" id="ch-ship"></div></div></div>
+    </div>
+  </div>
+</section>
 
-  <!-- TRENDS -->
-  <section class="page-section" id="sec-trends">
-    <div class="section-header">
-      <div><div class="section-title">Revenue <span>Trends</span></div><div class="section-subtitle">Monthly performance over time</div></div>
-    </div>
-    <div class="charts-row solo">
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">📊 Monthly Revenue & Profit</span><span class="card-badge">Time Series</span></div>
-        <div class="card-body"><div class="chart-container" style="min-height:380px" id="chart-monthly-area"></div></div>
-      </div>
-    </div>
-    <div class="charts-row">
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">📉 Profit Margin Over Time</span></div>
-        <div class="card-body"><div class="chart-container" id="chart-margin-line"></div></div>
-      </div>
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">📦 Monthly Orders Volume</span></div>
-        <div class="card-body"><div class="chart-container" id="chart-orders-bar"></div></div>
-      </div>
-    </div>
-  </section>
+<!-- ── TRENDS ── -->
+<section class="pg" id="pg-trends">
+  <div class="ph"><div><div class="ph-t">Revenue <span>Trends</span></div><div class="ph-s">Time-series performance analysis</div></div></div>
+  <div class="g1">
+    <div class="gc"><div class="gc-h"><span class="gc-t">📊 Monthly Revenue & Profit</span><span class="gc-b">Time Series</span></div><div class="gc-body"><div class="ch" style="min-height:340px" id="ch-monthly"></div></div></div>
+  </div>
+  <div class="g2">
+    <div class="gc"><div class="gc-h"><span class="gc-t">📉 Profit Margin %</span></div><div class="gc-body"><div class="ch" id="ch-margin"></div></div></div>
+    <div class="gc"><div class="gc-h"><span class="gc-t">📦 Quarterly Revenue</span></div><div class="gc-body"><div class="ch" id="ch-quarterly"></div></div></div>
+  </div>
+</section>
 
-  <!-- PRODUCTS -->
-  <section class="page-section" id="sec-products">
-    <div class="section-header">
-      <div><div class="section-title">Top <span>Products</span></div><div class="section-subtitle">Best performing SKUs by revenue</div></div>
-    </div>
-    <div class="charts-row">
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">🏆 Top 10 Products — Revenue</span></div>
-        <div class="card-body"><div class="chart-container" id="chart-top-products-bar"></div></div>
-      </div>
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">📋 Product Leaderboard</span></div>
-        <div class="card-body" id="products-table-wrap"></div>
-      </div>
-    </div>
-  </section>
+<!-- ── PRODUCTS ── -->
+<section class="pg" id="pg-products">
+  <div class="ph"><div><div class="ph-t">Top <span>Products</span></div><div class="ph-s">Best performing SKUs by revenue</div></div></div>
+  <div class="g2">
+    <div class="gc"><div class="gc-h"><span class="gc-t">📊 Top 10 Products — Revenue</span></div><div class="gc-body"><div class="ch" id="ch-prod-bar"></div></div></div>
+    <div class="gc"><div class="gc-h"><span class="gc-t">📋 Product Leaderboard</span></div><div class="gc-body" id="prod-tbl"></div></div>
+  </div>
+</section>
 
-  <!-- CATEGORIES -->
-  <section class="page-section" id="sec-categories">
-    <div class="section-header">
-      <div><div class="section-title">Category <span>Analysis</span></div><div class="section-subtitle">Revenue & profit by product category</div></div>
-    </div>
-    <div class="charts-row triple">
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">🗂️ Sales by Category</span></div>
-        <div class="card-body"><div class="chart-container" id="chart-cat-bar"></div></div>
-      </div>
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">💰 Profit by Category</span></div>
-        <div class="card-body"><div class="chart-container" id="chart-profit-cat"></div></div>
-      </div>
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">🍕 Category Share</span></div>
-        <div class="card-body"><div class="chart-container" id="chart-cat-pie"></div></div>
-      </div>
-    </div>
-  </section>
+<!-- ── CATEGORIES ── -->
+<section class="pg" id="pg-categories">
+  <div class="ph"><div><div class="ph-t">Category <span>Analysis</span></div><div class="ph-s">Revenue & profit breakdown</div></div></div>
+  <div class="g3">
+    <div class="gc"><div class="gc-h"><span class="gc-t">🗂️ Sales by Category</span></div><div class="gc-body"><div class="ch" id="ch-catbar"></div></div></div>
+    <div class="gc"><div class="gc-h"><span class="gc-t">💰 Profit by Category</span></div><div class="gc-body"><div class="ch" id="ch-profcat"></div></div></div>
+    <div class="gc"><div class="gc-h"><span class="gc-t">🍕 Category Share</span></div><div class="gc-body"><div class="ch" id="ch-catpie"></div></div></div>
+  </div>
+  <div class="g2">
+    <div class="gc"><div class="gc-h"><span class="gc-t">📦 Sub-Category Revenue</span></div><div class="gc-body"><div class="ch" id="ch-subcat"></div></div></div>
+    <div class="gc"><div class="gc-h"><span class="gc-t">📋 Category Details</span></div><div class="gc-body" id="cat-tbl"></div></div>
+  </div>
+</section>
 
-  <!-- CUSTOMERS -->
-  <section class="page-section" id="sec-customers">
-    <div class="section-header">
-      <div><div class="section-title">Top <span>Customers</span></div><div class="section-subtitle">Highest value customers by lifetime revenue</div></div>
-    </div>
-    <div class="charts-row">
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">👑 Top Customers Chart</span></div>
-        <div class="card-body"><div class="chart-container" id="chart-customers-bar"></div></div>
-      </div>
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">📋 Customer Leaderboard</span></div>
-        <div class="card-body" id="customers-table-wrap"></div>
-      </div>
-    </div>
-  </section>
+<!-- ── CUSTOMERS ── -->
+<section class="pg" id="pg-customers">
+  <div class="ph"><div><div class="ph-t">Top <span>Customers</span></div><div class="ph-s">Highest value buyers by lifetime revenue</div></div></div>
+  <div class="g2">
+    <div class="gc"><div class="gc-h"><span class="gc-t">👑 Customer Revenue Chart</span></div><div class="gc-body"><div class="ch" id="ch-cust-bar"></div></div></div>
+    <div class="gc"><div class="gc-h"><span class="gc-t">📋 Customer Leaderboard</span></div><div class="gc-body" id="cust-tbl"></div></div>
+  </div>
+</section>
 
-  <!-- REGIONS -->
-  <section class="page-section" id="sec-regions">
-    <div class="section-header">
-      <div><div class="section-title">Regional <span>Performance</span></div><div class="section-subtitle">Sales distribution by geography</div></div>
-    </div>
-    <div class="charts-row">
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">🌍 Sales by Region</span></div>
-        <div class="card-body"><div class="chart-container" id="chart-region-bar"></div></div>
-      </div>
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">🗺️ Regional Share</span></div>
-        <div class="card-body"><div class="chart-container" id="chart-region-pie"></div></div>
-      </div>
-    </div>
-  </section>
+<!-- ── REGIONAL ── -->
+<section class="pg" id="pg-regions">
+  <div class="ph"><div><div class="ph-t">Regional <span>Performance</span></div><div class="ph-s">Geographic sales distribution</div></div></div>
+  <div class="g2">
+    <div class="gc"><div class="gc-h"><span class="gc-t">🌍 Revenue by Region</span></div><div class="gc-body"><div class="ch" id="ch-reg-bar"></div></div></div>
+    <div class="gc"><div class="gc-h"><span class="gc-t">🗺️ Regional Share</span></div><div class="gc-body"><div class="ch" id="ch-reg-pie"></div></div></div>
+  </div>
+  <div class="g1">
+    <div class="gc"><div class="gc-h"><span class="gc-t">📊 Category × Region Heatmap</span><span class="gc-b">Cross Analysis</span></div><div class="gc-body"><div class="ch" style="min-height:320px" id="ch-heatmap"></div></div></div>
+  </div>
+</section>
 
-  <!-- AI INSIGHTS -->
-  <section class="page-section" id="sec-insights">
-    <div class="section-header">
-      <div><div class="section-title">🤖 AI <span>Insights</span></div><div class="section-subtitle">Automated business intelligence powered by data analysis</div></div>
-    </div>
-    <div class="insights-grid" id="insights-grid">
-      <div class="empty-state"><div class="empty-icon">🤖</div><div class="empty-title">Upload data to generate insights</div></div>
-    </div>
-  </section>
+<!-- ── AI INSIGHTS ── -->
+<section class="pg" id="pg-insights">
+  <div class="ph"><div><div class="ph-t">🤖 AI <span>Insights</span></div><div class="ph-s">Automated business intelligence</div></div></div>
+  <div class="ins-grid" id="ins-grid">
+    <div class="empty"><div class="empty-i">🤖</div><div class="empty-t">Upload data to generate insights</div></div>
+  </div>
+</section>
 
-  <!-- REPORTS -->
-  <section class="page-section" id="sec-reports">
-    <div class="section-header">
-      <div><div class="section-title">Export <span>Reports</span></div><div class="section-subtitle">Download your analytics in various formats</div></div>
-    </div>
-    <div class="charts-row">
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">📥 Available Reports</span></div>
-        <div class="card-body">
-          <p style="color:var(--text-secondary);font-size:13px;margin-bottom:20px">Export your full analytics as a professional Excel report with KPIs, product rankings, and raw data.</p>
-          <div class="dl-row">
-            <button class="dl-btn primary" onclick="downloadExcel()">📊 Download Excel Report</button>
-          </div>
-          <div style="margin-top:24px;padding:16px;background:rgba(108,99,255,.08);border-radius:12px;border:1px solid rgba(108,99,255,.2)">
-            <div style="font-size:13px;color:var(--accent1);font-weight:600;margin-bottom:6px">📋 Report Contents</div>
-            <ul style="font-size:12.5px;color:var(--text-secondary);list-style:none;display:flex;flex-direction:column;gap:6px">
-              <li>✅ Executive Summary with all KPIs</li>
-              <li>✅ Full raw data (up to 5,000 rows)</li>
-              <li>✅ Top 20 products by revenue</li>
-              <li>✅ Professional formatting & styling</li>
-            </ul>
+<!-- ── EXECUTIVE SUMMARY ── -->
+<section class="pg" id="pg-summary">
+  <div class="ph">
+    <div><div class="ph-t">Executive <span>Summary</span></div><div class="ph-s">Complete business performance overview</div></div>
+    <div class="dl-row"><button class="dl-btn prim" onclick="dlExcel()">📥 Export Report</button></div>
+  </div>
+  <div id="summary-content">
+    <div class="empty"><div class="empty-i">📋</div><div class="empty-t">Upload a dataset to generate your summary</div></div>
+  </div>
+</section>
+
+<!-- ── REPORTS ── -->
+<section class="pg" id="pg-reports">
+  <div class="ph"><div><div class="ph-t">Export <span>Reports</span></div><div class="ph-s">Download analytics in professional formats</div></div></div>
+  <div class="g2">
+    <div class="gc"><div class="gc-h"><span class="gc-t">📥 Available Exports</span></div>
+      <div class="gc-body">
+        <p style="color:var(--txt2);font-size:13px;margin-bottom:18px;line-height:1.7">Export a fully formatted Excel report with executive summary, KPIs, top products, raw data, and professional styling.</p>
+        <div class="dl-row"><button class="dl-btn prim" onclick="dlExcel()">📊 Download Excel Report</button></div>
+        <div style="margin-top:20px;padding:14px;background:rgba(124,111,255,.06);border-radius:10px;border:1px solid rgba(124,111,255,.15)">
+          <div style="font-size:12px;color:var(--a1);font-weight:700;margin-bottom:8px">📋 Report Contains</div>
+          <div style="font-size:12px;color:var(--txt2);display:flex;flex-direction:column;gap:5px">
+            <span>✅ Executive Summary with all KPIs</span>
+            <span>✅ Raw data (up to 10,000 rows)</span>
+            <span>✅ Top 20 products by revenue</span>
+            <span>✅ Professional dark-theme formatting</span>
           </div>
         </div>
       </div>
-      <div class="glass-card">
-        <div class="card-header"><span class="card-title">ℹ️ Dataset Info</span></div>
-        <div class="card-body" id="dataset-info-wrap">
-          <div class="empty-state"><div class="empty-icon">📂</div><div class="empty-title">No dataset loaded</div></div>
-        </div>
-      </div>
     </div>
-  </section>
+    <div class="gc"><div class="gc-h"><span class="gc-t">ℹ️ Dataset Overview</span></div><div class="gc-body" id="ds-info"><div class="empty"><div class="empty-i">📂</div><div class="empty-t">No dataset loaded</div></div></div></div>
+  </div>
+</section>
 </main>
 
-<!-- Toast -->
 <div id="toast"></div>
 
 <script>
-// ─── State ─────────────────────────────────────────────────────────────────
-let analysisData = null;
-const plotlyConfig = {
-  displayModeBar: false,
-  responsive: true
-};
-const darkLayout = {
-  paper_bgcolor: 'transparent',
-  plot_bgcolor:  'transparent',
-  font: { family: 'DM Sans, sans-serif', color: '#8892b0', size: 12 },
-  margin: { t: 20, r: 16, b: 40, l: 50 },
-  xaxis: { gridcolor: 'rgba(255,255,255,0.06)', linecolor: 'rgba(255,255,255,0.1)', tickfont: { size: 11 } },
-  yaxis: { gridcolor: 'rgba(255,255,255,0.06)', linecolor: 'rgba(255,255,255,0.1)', tickfont: { size: 11 } },
-  legend: { bgcolor: 'transparent', font: { size: 11 } }
-};
+// ── State ──────────────────────────────────────────────────────────────────────
+let D = null; // analysis data
 
-const COLORS = ['#6c63ff','#ff6584','#43e97b','#f7971e','#38bdf8','#e879f9','#34d399','#fb923c','#a78bfa','#f472b6'];
+const PLY_CFG = { displayModeBar:false, responsive:true };
+const DARK = {
+  paper_bgcolor:'transparent', plot_bgcolor:'transparent',
+  font:{ family:'DM Sans,sans-serif', color:'#8892b0', size:11 },
+  margin:{t:16,r:14,b:38,l:50},
+  xaxis:{ gridcolor:'rgba(255,255,255,.05)', linecolor:'rgba(255,255,255,.08)', tickfont:{size:10} },
+  yaxis:{ gridcolor:'rgba(255,255,255,.05)', linecolor:'rgba(255,255,255,.08)', tickfont:{size:10} },
+  legend:{ bgcolor:'transparent', font:{size:11} }
+};
+const C = ['#7c6fff','#ff6b8a','#3dffa0','#ffb347','#38d9f5','#e879f9','#34d399','#fb923c','#a78bfa','#f472b6','#60a5fa','#fbbf24'];
 
-// ─── Navigation ─────────────────────────────────────────────────────────────
-document.querySelectorAll('.nav-item').forEach(el => {
-  el.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    el.classList.add('active');
-    const sec = el.dataset.section;
-    document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active-section'));
-    document.getElementById('sec-' + sec).classList.add('active-section');
-    if (window.innerWidth < 768) document.getElementById('sidebar').classList.remove('open');
-    // lazy render charts on tab switch
-    if (analysisData && sec !== 'overview') renderSectionCharts(sec);
+// ── Clock ──────────────────────────────────────────────────────────────────────
+function tick(){ document.getElementById('nb-time').textContent = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) }
+tick(); setInterval(tick,1000);
+
+// ── Nav ────────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.ni').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+    el.classList.add('on');
+    const p = el.dataset.p;
+    document.querySelectorAll('.pg').forEach(s=>s.classList.remove('on'));
+    document.getElementById('pg-'+p).classList.add('on');
+    if(window.innerWidth<768) document.getElementById('sb').classList.remove('open');
+    if(D) renderSection(p);
   });
 });
 
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
+// ── Upload ─────────────────────────────────────────────────────────────────────
+function trigUp(){ document.getElementById('file-input').click() }
+function onDOver(e){ e.preventDefault(); document.getElementById('upz').classList.add('dov') }
+function onDLeave(e){ document.getElementById('upz').classList.remove('dov') }
+function onDrop(e){ e.preventDefault(); document.getElementById('upz').classList.remove('dov'); const f=e.dataTransfer.files[0]; if(f) doUpload(f) }
+function handleFile(e){ const f=e.target.files[0]; if(f) doUpload(f) }
+
+async function doUpload(file){
+  const prog=document.getElementById('uprog');
+  const pbf=document.getElementById('pbf');
+  const ptxt=document.getElementById('ptxt');
+  prog.style.display='block'; pbf.style.width='15%'; ptxt.textContent='Uploading file…';
+  const fd=new FormData(); fd.append('file',file);
+  try{
+    pbf.style.width='40%'; ptxt.textContent='Auto-detecting columns…';
+    const r=await fetch('/upload',{method:'POST',body:fd});
+    const data=await r.json();
+    if(data.error){ toast('❌ '+data.error,'err'); prog.style.display='none'; return }
+
+    pbf.style.width='70%'; ptxt.textContent='Running AI analysis…';
+    await runAnalysis(data);
+
+    pbf.style.width='100%'; ptxt.textContent='Complete!';
+    setTimeout(()=>{ prog.style.display='none'; pbf.style.width='0%' },700);
+    toast(`✅ ${data.rows.toLocaleString()} rows loaded — ${Object.values(data.col_map).filter(Boolean).length} columns detected`,'ok');
+    document.getElementById('live-dot').classList.add('active');
+  } catch(e){ toast('❌ '+e.message,'err'); prog.style.display='none' }
 }
 
-// ─── Clock ───────────────────────────────────────────────────────────────────
-function updateClock() {
-  document.getElementById('navbar-time').textContent = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
-}
-updateClock(); setInterval(updateClock, 1000);
-
-// ─── Upload ──────────────────────────────────────────────────────────────────
-function triggerUpload() { document.getElementById('file-input').click(); }
-
-function handleDragOver(e) { e.preventDefault(); document.getElementById('upload-zone').classList.add('drag-over'); }
-function handleDragLeave(e) { document.getElementById('upload-zone').classList.remove('drag-over'); }
-function handleDrop(e) {
-  e.preventDefault();
-  document.getElementById('upload-zone').classList.remove('drag-over');
-  const f = e.dataTransfer.files[0];
-  if (f) uploadFile(f);
-}
-function handleFile(e) {
-  const f = e.target.files[0];
-  if (f) uploadFile(f);
+async function runAnalysis(uploadData){
+  const r=await fetch('/analyze');
+  const data=await r.json();
+  if(data.error){ toast('❌ '+data.error,'err'); return }
+  D=data;
+  renderDashboard(data, uploadData);
 }
 
-async function uploadFile(file) {
-  const prog = document.getElementById('upload-progress');
-  const pb   = document.getElementById('pb');
-  const pt   = document.getElementById('progress-text');
-  prog.style.display = 'block';
-  pb.style.width = '20%'; pt.textContent = 'Uploading file…';
+// ── Render ─────────────────────────────────────────────────────────────────────
+function renderDashboard(d, ud){
+  document.getElementById('upwrap').style.display='none';
+  document.getElementById('dash').style.display='block';
 
-  const fd = new FormData();
-  fd.append('file', file);
-
-  try {
-    pb.style.width = '50%'; pt.textContent = 'Processing with Pandas…';
-    const res  = await fetch('/upload', { method: 'POST', body: fd });
-    const data = await res.json();
-    if (data.error) { showToast('❌ ' + data.error, 'error'); prog.style.display='none'; return; }
-
-    pb.style.width = '80%'; pt.textContent = 'Running analysis…';
-    await runAnalysis();
-    pb.style.width = '100%'; pt.textContent = 'Done!';
-
-    setTimeout(() => { prog.style.display='none'; pb.style.width='0%'; }, 800);
-    showToast(`✅ ${data.rows.toLocaleString()} rows loaded from ${data.filename}`, 'success');
-    document.getElementById('status-dot').style.background = 'var(--accent3)';
-
-  } catch(err) {
-    showToast('❌ Upload failed: ' + err.message, 'error');
-    prog.style.display = 'none';
-  }
-}
-
-async function runAnalysis() {
-  const res  = await fetch('/analyze');
-  const data = await res.json();
-  if (data.error) { showToast('❌ ' + data.error, 'error'); return; }
-  analysisData = data;
-  renderDashboard(data);
-}
-
-// ─── Render Dashboard ────────────────────────────────────────────────────────
-function renderDashboard(d) {
-  document.getElementById('upload-wrapper').style.display = 'none';
-  document.getElementById('dashboard-content').style.display = 'block';
-
-  const k = d.kpis;
-  document.getElementById('data-subtitle').textContent =
+  const k=d.kpis;
+  document.getElementById('ph-sub').textContent=
     `${d.filename} · ${k.total_orders.toLocaleString()} orders · ${k.unique_products} products · ${k.unique_customers} customers`;
 
-  // KPI cards
-  const kpis = [
-    { label:'Total Revenue',    value: fmt$(k.total_revenue),    sub:'Gross sales', icon:'💰', cls:'c1' },
-    { label:'Total Profit',     value: fmt$(k.total_profit),     sub:'Net income',  icon:'📈', cls:'c2' },
-    { label:'Profit Margin',    value: k.profit_margin+'%',      sub:'Net margin',  icon:'📊', cls:'c3' },
-    { label:'Total Orders',     value: k.total_orders.toLocaleString(), sub:'Transactions', icon:'🛒', cls:'c4' },
-    { label:'Avg Order Value',  value: fmt$(k.avg_order_value),  sub:'Per order',   icon:'💳', cls:'c5' },
-    { label:'Unique Customers', value: k.unique_customers.toLocaleString(), sub:'Buyers', icon:'👥', cls:'c6' },
-    { label:'Unique Products',  value: k.unique_products.toLocaleString(), sub:'SKUs',   icon:'📦', cls:'c7' },
-    { label:'Units Sold',       value: k.total_quantity.toLocaleString(), sub:'Quantity',icon:'🔢', cls:'c8' },
-  ];
-  document.getElementById('kpi-grid').innerHTML = kpis.map(k =>
-    `<div class="kpi-card ${k.cls}">
-      <div class="kpi-icon">${k.icon}</div>
-      <div class="kpi-label">${k.label}</div>
-      <div class="kpi-value">${k.value}</div>
-      <div class="kpi-sub">${k.sub}</div>
+  // Detection Banner
+  if(ud && ud.col_map){
+    const tags = document.getElementById('det-tags');
+    const icons = {date:'📅',sales:'💰',profit:'📊',quantity:'📦',product:'🏷️',
+                   category:'🗂️',region:'🌍',customer:'👥',order_id:'🔢',
+                   sub_category:'📁',discount:'🏷️',cost:'💸',ship_mode:'🚚'};
+    tags.innerHTML = Object.entries(ud.col_map)
+      .filter(([f,c])=>c && !c.startsWith('__'))
+      .map(([f,c])=>`<div class="det-tag">${icons[f]||'•'} <b>${f}</b> <span class="arrow">→</span> <span class="orig">${c}</span></div>`)
+      .join('');
+    document.getElementById('detect-banner').style.display='block';
+  }
+
+  // KPI Cards
+  const kpiDefs=[
+    {label:'Total Revenue',     val:fmt$(k.total_revenue),       sub:'Gross sales',         cls:'k1', icon:'💰'},
+    {label:'Total Profit',      val:fmt$(k.total_profit),        sub:'Net income',           cls:'k2', icon:'📈'},
+    {label:'Profit Margin',     val:k.profit_margin+'%',         sub:'Net margin %',         cls:'k3', icon:'📊'},
+    {label:'Total Orders',      val:k.total_orders.toLocaleString(), sub:'Transactions',     cls:'k4', icon:'🛒'},
+    {label:'Avg Order Value',   val:fmt$(k.avg_order_value),     sub:'Per transaction',      cls:'k5', icon:'💳'},
+    {label:'Unique Customers',  val:k.unique_customers.toLocaleString(), sub:'Buyers',       cls:'k6', icon:'👥'},
+    {label:'Unique Products',   val:k.unique_products.toLocaleString(), sub:'SKUs',          cls:'k7', icon:'📦'},
+    {label:'Units Sold',        val:k.total_quantity.toLocaleString(), sub:'Total quantity', cls:'k8', icon:'🔢'},
+    {label:'Revenue / Customer',val:fmt$(k.revenue_per_customer), sub:'Avg lifetime value', cls:'k9', icon:'👑'},
+    {label:'Total Discount',    val:fmt$(k.total_discount),      sub:'Discounts given',      cls:'k10',icon:'🏷️'},
+    {label:'Avg Discount %',    val:k.avg_discount_pct+'%',      sub:'Average discount rate',cls:'k11',icon:'%'},
+  ].filter(x=>x.val !== '$0' && x.val !== '0%');
+
+  document.getElementById('kpi-grid').innerHTML=kpiDefs.map(x=>`
+    <div class="kc ${x.cls}">
+      <div class="kc-icon">${x.icon}</div>
+      <div class="kc-label">${x.label}</div>
+      <div class="kc-val">${x.val}</div>
+      <div class="kc-sub">${x.sub}</div>
     </div>`).join('');
 
   // Overview charts
-  renderRevenueTrend('chart-revenue-trend', d.monthly_data, 'compact');
-  renderCategoryDonut('chart-cat-donut', d.category_data);
+  renderRevTrend('ch-trend', d.monthly_data, 260);
+  renderCatDonut('ch-catdona', d.category_data, 260);
+  renderTopNBar('ch-top5prod', d.top_products.slice(0,5), 240, 'Products');
+  renderTopNBar('ch-top5reg', d.region_data.slice(0,5), 240, 'Regions', 'region');
+  renderShipPie('ch-ship', d.ship_data, 240);
 
-  // AI Insights
+  // Insights
   renderInsights(d.ai_insights);
-
+  // Summary
+  renderSummary(d.exec_summary);
   // Dataset info
-  renderDatasetInfo(d);
+  renderDsInfo(d);
 }
 
-function renderSectionCharts(sec) {
-  if (!analysisData) return;
-  const d = analysisData;
-  if (sec === 'trends') {
-    renderMonthlyArea('chart-monthly-area', d.monthly_data);
-    renderMarginLine('chart-margin-line', d.monthly_data);
-    renderOrdersBar('chart-orders-bar', d.monthly_data);
-  } else if (sec === 'products') {
-    renderTopProductsBar('chart-top-products-bar', d.top_products);
-    renderProductsTable('products-table-wrap', d.top_products);
-  } else if (sec === 'categories') {
-    renderCategoryBar('chart-cat-bar', d.category_data);
-    renderProfitCat('chart-profit-cat', d.profit_category);
-    renderCategoryPie('chart-cat-pie', d.category_data);
-  } else if (sec === 'customers') {
-    renderCustomersBar('chart-customers-bar', d.top_customers);
-    renderCustomersTable('customers-table-wrap', d.top_customers);
-  } else if (sec === 'regions') {
-    renderRegionBar('chart-region-bar', d.region_data);
-    renderRegionPie('chart-region-pie', d.region_data);
+function renderSection(p){
+  if(!D) return;
+  if(p==='trends'){
+    renderRevTrend('ch-monthly',D.monthly_data,340);
+    renderMargin('ch-margin',D.monthly_data,260);
+    renderQuarterly('ch-quarterly',D.quarterly_data,260);
+  } else if(p==='products'){
+    renderProdBar('ch-prod-bar',D.top_products,280);
+    renderTable('prod-tbl',D.top_products,'name','sales','profit','quantity');
+  } else if(p==='categories'){
+    renderCatBar('ch-catbar',D.category_data,260);
+    renderProfitCat('ch-profcat',D.category_data,260);
+    renderCatPie('ch-catpie',D.category_data,260);
+    renderSubCat('ch-subcat',D.sub_category_data,260);
+    renderCatTable('cat-tbl',D.category_data);
+  } else if(p==='customers'){
+    renderCustBar('ch-cust-bar',D.top_customers,280);
+    renderTable('cust-tbl',D.top_customers,'name','sales','orders');
+  } else if(p==='regions'){
+    renderRegBar('ch-reg-bar',D.region_data,280);
+    renderRegPie('ch-reg-pie',D.region_data,280);
+    renderHeatmap('ch-heatmap',D.cat_region_data,320);
   }
 }
 
-// ─── Chart Helpers ────────────────────────────────────────────────────────────
-function renderRevenueTrend(id, data, mode) {
-  if (!data.length) return emptyChart(id);
-  const layout = { ...darkLayout, height: mode === 'compact' ? 280 : 380, showlegend: true };
-  const traces = [
-    { x: data.map(r=>r.month), y: data.map(r=>r.revenue), type:'scatter', mode:'lines+markers',
-      name:'Revenue', line:{color:COLORS[0],width:2.5}, marker:{size:5},
-      fill:'tozeroy', fillcolor:'rgba(108,99,255,0.08)' },
-    { x: data.map(r=>r.month), y: data.map(r=>r.profit), type:'scatter', mode:'lines+markers',
-      name:'Profit', line:{color:COLORS[1],width:2}, marker:{size:4} }
-  ];
-  Plotly.newPlot(id, traces, layout, plotlyConfig);
+// ── CHARTS ────────────────────────────────────────────────────────────────────
+function renderRevTrend(id,data,h=280){
+  if(!data||!data.length) return empty(id);
+  Plotly.newPlot(id,[
+    {x:data.map(r=>r.month),y:data.map(r=>r.revenue),type:'scatter',mode:'lines+markers',
+     name:'Revenue',line:{color:C[0],width:2.5},marker:{size:5},
+     fill:'tozeroy',fillcolor:'rgba(124,111,255,.08)',
+     hovertemplate:'<b>%{x}</b><br>Revenue: $%{y:,.0f}<extra></extra>'},
+    ...(data[0]?.profit!==undefined?[{
+     x:data.map(r=>r.month),y:data.map(r=>r.profit),type:'scatter',mode:'lines+markers',
+     name:'Profit',line:{color:C[1],width:2},marker:{size:4},
+     hovertemplate:'<b>%{x}</b><br>Profit: $%{y:,.0f}<extra></extra>'}]:[])
+  ],{...DARK,height:h,showlegend:true,yaxis:{...DARK.yaxis,tickprefix:'$'}},PLY_CFG);
 }
 
-function renderCategoryDonut(id, data) {
-  if (!data.length) return emptyChart(id);
-  const layout = { ...darkLayout, height:280, showlegend:true,
-    legend:{orientation:'v',x:1,y:.5,font:{size:11}}, margin:{t:10,r:100,b:10,l:10} };
-  Plotly.newPlot(id, [{
-    type:'pie', hole:.55,
-    labels: data.slice(0,8).map(r=>r.category),
-    values: data.slice(0,8).map(r=>r.sales),
-    marker:{ colors:COLORS },
-    textfont:{size:10},
-    hovertemplate:'<b>%{label}</b><br>$%{value:,.0f}<br>%{percent}<extra></extra>'
-  }], layout, plotlyConfig);
+function renderCatDonut(id,data,h=260){
+  if(!data||!data.length) return empty(id);
+  Plotly.newPlot(id,[{
+    type:'pie',hole:.55,labels:data.slice(0,8).map(r=>r.category),values:data.slice(0,8).map(r=>r.sales),
+    marker:{colors:C},textfont:{size:10},
+    hovertemplate:'<b>%{label}</b><br>$%{value:,.0f} (%{percent})<extra></extra>'
+  }],{...DARK,height:h,showlegend:true,legend:{orientation:'v',x:1,y:.5,font:{size:10}},
+    margin:{t:10,r:110,b:10,l:10}},PLY_CFG);
 }
 
-function renderMonthlyArea(id, data) {
-  if (!data.length) return emptyChart(id);
-  const layout = { ...darkLayout, height:380, showlegend:true };
-  Plotly.newPlot(id, [
-    { x:data.map(r=>r.month), y:data.map(r=>r.revenue), type:'scatter', mode:'lines',
-      name:'Revenue', line:{color:COLORS[0],width:3},
-      fill:'tonexty', fillcolor:'rgba(108,99,255,0.12)' },
-    { x:data.map(r=>r.month), y:data.map(r=>r.profit), type:'scatter', mode:'lines',
-      name:'Profit', line:{color:COLORS[2],width:2.5},
-      fill:'tozeroy', fillcolor:'rgba(67,233,123,0.08)' }
-  ], layout, plotlyConfig);
+function renderTopNBar(id,data,h=240,label='Items',nameKey='name'){
+  if(!data||!data.length) return empty(id,'No data');
+  const key = nameKey==='region'?'region':'name';
+  Plotly.newPlot(id,[{
+    y:data.map(r=>shorten(r[key]||r.name||r.region,18)),x:data.map(r=>r.sales),
+    type:'bar',orientation:'h',marker:{color:C,opacity:.9},
+    hovertemplate:`<b>%{y}</b><br>$%{x:,.0f}<extra></extra>`
+  }],{...DARK,height:h,margin:{...DARK.margin,l:120},xaxis:{...DARK.xaxis,tickprefix:'$'}},PLY_CFG);
 }
 
-function renderMarginLine(id, data) {
-  if (!data.length) return emptyChart(id);
-  const margins = data.map(r => r.revenue > 0 ? (r.profit/r.revenue*100).toFixed(1) : 0);
-  Plotly.newPlot(id, [{
-    x:data.map(r=>r.month), y:margins, type:'scatter', mode:'lines+markers',
-    name:'Margin %', line:{color:COLORS[3],width:2.5},
-    marker:{size:6, color:margins.map(m=>m>20?COLORS[2]:m>10?COLORS[3]:COLORS[1])},
-    hovertemplate:'<b>%{x}</b><br>Margin: %{y:.1f}%<extra></extra>'
-  }], { ...darkLayout, height:280, yaxis:{...darkLayout.yaxis,ticksuffix:'%'} }, plotlyConfig);
+function renderShipPie(id,data,h=240){
+  if(!data||!data.length) return empty(id,'No shipment data');
+  Plotly.newPlot(id,[{
+    type:'pie',labels:data.map(r=>r.ship_mode),values:data.map(r=>r.sales),
+    marker:{colors:C},textfont:{size:10},hole:.35,
+    hovertemplate:'<b>%{label}</b><br>$%{value:,.0f}<extra></extra>'
+  }],{...DARK,height:h,margin:{t:10,r:10,b:10,l:10},showlegend:true,legend:{font:{size:10}}},PLY_CFG);
 }
 
-function renderOrdersBar(id, data) {
-  if (!data.length) return emptyChart(id);
-  Plotly.newPlot(id, [{
-    x:data.map(r=>r.month), y:data.map(r=>r.revenue),
-    type:'bar', name:'Revenue',
-    marker:{color:COLORS, opacity:.85},
+function renderMargin(id,data,h=260){
+  if(!data||!data.length||!data[0]?.profit) return empty(id,'No profit data');
+  const margins=data.map(r=>r.revenue>0?(r.profit/r.revenue*100).toFixed(1):0);
+  Plotly.newPlot(id,[{
+    x:data.map(r=>r.month),y:margins,type:'scatter',mode:'lines+markers',name:'Margin %',
+    line:{color:C[2],width:2.5},marker:{size:6,color:margins.map(m=>m>20?C[2]:m>10?C[3]:C[1])},
+    hovertemplate:'<b>%{x}</b><br>Margin: %{y}%<extra></extra>'
+  }],{...DARK,height:h,yaxis:{...DARK.yaxis,ticksuffix:'%'}},PLY_CFG);
+}
+
+function renderQuarterly(id,data,h=260){
+  if(!data||!data.length) return empty(id,'No quarterly data');
+  Plotly.newPlot(id,[{
+    x:data.map(r=>r.quarter),y:data.map(r=>r.revenue),type:'bar',
+    marker:{color:C.slice(0,data.length),opacity:.9},
     hovertemplate:'<b>%{x}</b><br>$%{y:,.0f}<extra></extra>'
-  }], { ...darkLayout, height:280 }, plotlyConfig);
+  }],{...DARK,height:h,yaxis:{...DARK.yaxis,tickprefix:'$'}},PLY_CFG);
 }
 
-function renderTopProductsBar(id, data) {
-  if (!data.length) return emptyChart(id);
-  const top = data.slice(0,10);
-  Plotly.newPlot(id, [{
-    y: top.map(r=>r.name.length>25?r.name.slice(0,25)+'…':r.name),
-    x: top.map(r=>r.sales),
-    type:'bar', orientation:'h',
-    marker:{ color:COLORS, opacity:.9 },
+function renderProdBar(id,data,h=280){
+  if(!data||!data.length) return empty(id);
+  const top=data.slice(0,10);
+  Plotly.newPlot(id,[{
+    y:top.map(r=>shorten(r.name,28)),x:top.map(r=>r.sales),
+    type:'bar',orientation:'h',marker:{color:C,opacity:.9},
     hovertemplate:'<b>%{y}</b><br>$%{x:,.0f}<extra></extra>'
-  }], { ...darkLayout, height:340, margin:{...darkLayout.margin,l:160},
-    xaxis:{...darkLayout.xaxis,tickprefix:'$'} }, plotlyConfig);
+  }],{...DARK,height:h,margin:{...DARK.margin,l:180},xaxis:{...DARK.xaxis,tickprefix:'$'}},PLY_CFG);
 }
 
-function renderProductsTable(id, data) {
-  if (!data.length) { document.getElementById(id).innerHTML = '<div class="empty-state"><div>No product data</div></div>'; return; }
-  const max = data[0].sales;
-  document.getElementById(id).innerHTML = `
-    <table class="data-table"><thead><tr><th>#</th><th>Product</th><th>Revenue</th></tr></thead>
-    <tbody>${data.slice(0,10).map((r,i)=>`
-      <tr><td><span class="rank-badge ${i<3?'rank-'+(i+1):'rank-other'}">${i+1}</span></td>
-      <td>${r.name.length>32?r.name.slice(0,32)+'…':r.name}</td>
-      <td><div class="bar-cell">
-        <div class="mini-bar" style="width:${Math.max(4,r.sales/max*100)}px"></div>
-        ${fmt$(r.sales)}
-      </div></td></tr>`).join('')}
-    </tbody></table>`;
-}
-
-function renderCategoryBar(id, data) {
-  if (!data.length) return emptyChart(id);
-  Plotly.newPlot(id, [{
-    x:data.map(r=>r.category), y:data.map(r=>r.sales),
-    type:'bar', marker:{color:COLORS, opacity:.9},
+function renderCatBar(id,data,h=260){
+  if(!data||!data.length) return empty(id);
+  Plotly.newPlot(id,[{
+    x:data.map(r=>r.category),y:data.map(r=>r.sales),type:'bar',
+    marker:{color:C,opacity:.9},
     hovertemplate:'<b>%{x}</b><br>$%{y:,.0f}<extra></extra>'
-  }], { ...darkLayout, height:280, xaxis:{...darkLayout.xaxis,tickangle:-25} }, plotlyConfig);
+  }],{...DARK,height:h,xaxis:{...DARK.xaxis,tickangle:-20},yaxis:{...DARK.yaxis,tickprefix:'$'}},PLY_CFG);
 }
 
-function renderProfitCat(id, data) {
-  if (!data.length) return emptyChart(id);
-  Plotly.newPlot(id, [{
-    x:data.map(r=>r.category), y:data.map(r=>r.profit),
-    type:'bar',
-    marker:{ color:data.map(r=>r.profit>=0?COLORS[2]:COLORS[1]), opacity:.9 },
-    hovertemplate:'<b>%{x}</b><br>$%{y:,.0f}<extra></extra>'
-  }], { ...darkLayout, height:280, xaxis:{...darkLayout.xaxis,tickangle:-25} }, plotlyConfig);
+function renderProfitCat(id,data,h=260){
+  if(!data||!data.length||!data[0]?.profit) return empty(id,'No profit data');
+  Plotly.newPlot(id,[{
+    x:data.map(r=>r.category),y:data.map(r=>r.profit),type:'bar',
+    marker:{color:data.map(r=>(r.profit||0)>=0?C[2]:C[1]),opacity:.9},
+    hovertemplate:'<b>%{x}</b><br>Profit: $%{y:,.0f}<extra></extra>'
+  }],{...DARK,height:h,xaxis:{...DARK.xaxis,tickangle:-20},yaxis:{...DARK.yaxis,tickprefix:'$'}},PLY_CFG);
 }
 
-function renderCategoryPie(id, data) {
-  if (!data.length) return emptyChart(id);
-  Plotly.newPlot(id, [{
-    type:'pie', labels:data.map(r=>r.category), values:data.map(r=>r.sales),
-    marker:{colors:COLORS}, textfont:{size:10}, hole:.3,
-    hovertemplate:'<b>%{label}</b><br>$%{value:,.0f}<br>%{percent}<extra></extra>'
-  }], { ...darkLayout, height:280, margin:{t:10,r:10,b:10,l:10} }, plotlyConfig);
+function renderCatPie(id,data,h=260){
+  if(!data||!data.length) return empty(id);
+  Plotly.newPlot(id,[{
+    type:'pie',labels:data.map(r=>r.category),values:data.map(r=>r.sales),
+    marker:{colors:C},textfont:{size:10},hole:.25,
+    hovertemplate:'<b>%{label}</b><br>$%{value:,.0f} (%{percent})<extra></extra>'
+  }],{...DARK,height:h,margin:{t:10,r:10,b:10,l:10}},PLY_CFG);
 }
 
-function renderCustomersBar(id, data) {
-  if (!data.length) return emptyChart(id);
-  const top = data.slice(0,10);
-  Plotly.newPlot(id, [{
-    y:top.map(r=>r.name.length>20?r.name.slice(0,20)+'…':r.name),
-    x:top.map(r=>r.sales), type:'bar', orientation:'h',
-    marker:{color:COLORS, opacity:.9},
+function renderSubCat(id,data,h=260){
+  if(!data||!data.length) return empty(id,'No sub-category data');
+  const top=data.slice(0,10);
+  Plotly.newPlot(id,[{
+    y:top.map(r=>r.sub_category),x:top.map(r=>r.sales),type:'bar',orientation:'h',
+    marker:{color:C,opacity:.9},
     hovertemplate:'<b>%{y}</b><br>$%{x:,.0f}<extra></extra>'
-  }], { ...darkLayout, height:320, margin:{...darkLayout.margin,l:140},
-    xaxis:{...darkLayout.xaxis,tickprefix:'$'} }, plotlyConfig);
+  }],{...DARK,height:h,margin:{...DARK.margin,l:130},xaxis:{...DARK.xaxis,tickprefix:'$'}},PLY_CFG);
 }
 
-function renderCustomersTable(id, data) {
-  if (!data.length) { document.getElementById(id).innerHTML = '<div class="empty-state"><div>No customer data</div></div>'; return; }
-  const max = data[0].sales;
-  document.getElementById(id).innerHTML = `
-    <table class="data-table"><thead><tr><th>#</th><th>Customer</th><th>Revenue</th></tr></thead>
-    <tbody>${data.slice(0,10).map((r,i)=>`
-      <tr><td><span class="rank-badge ${i<3?'rank-'+(i+1):'rank-other'}">${i+1}</span></td>
-      <td>${r.name}</td>
-      <td><div class="bar-cell">
-        <div class="mini-bar" style="width:${Math.max(4,r.sales/max*100)}px"></div>
-        ${fmt$(r.sales)}
-      </div></td></tr>`).join('')}
-    </tbody></table>`;
+function renderCustBar(id,data,h=280){
+  if(!data||!data.length) return empty(id,'No customer data');
+  const top=data.slice(0,10);
+  Plotly.newPlot(id,[{
+    y:top.map(r=>shorten(r.name,22)),x:top.map(r=>r.sales),
+    type:'bar',orientation:'h',marker:{color:C,opacity:.9},
+    hovertemplate:'<b>%{y}</b><br>$%{x:,.0f}<extra></extra>'
+  }],{...DARK,height:h,margin:{...DARK.margin,l:150},xaxis:{...DARK.xaxis,tickprefix:'$'}},PLY_CFG);
 }
 
-function renderRegionBar(id, data) {
-  if (!data.length) return emptyChart(id, 'No regional data in dataset');
-  Plotly.newPlot(id, [{
-    x:data.map(r=>r.region), y:data.map(r=>r.sales),
-    type:'bar', marker:{color:COLORS, opacity:.9},
+function renderRegBar(id,data,h=280){
+  if(!data||!data.length) return empty(id,'No regional data');
+  Plotly.newPlot(id,[{
+    x:data.map(r=>r.region),y:data.map(r=>r.sales),type:'bar',
+    marker:{color:C,opacity:.9},
     hovertemplate:'<b>%{x}</b><br>$%{y:,.0f}<extra></extra>'
-  }], { ...darkLayout, height:300 }, plotlyConfig);
+  }],{...DARK,height:h,xaxis:{...DARK.xaxis,tickangle:-15},yaxis:{...DARK.yaxis,tickprefix:'$'}},PLY_CFG);
 }
 
-function renderRegionPie(id, data) {
-  if (!data.length) return emptyChart(id, 'No regional data in dataset');
-  Plotly.newPlot(id, [{
-    type:'pie', labels:data.map(r=>r.region), values:data.map(r=>r.sales),
-    marker:{colors:COLORS}, textfont:{size:10},
-    hovertemplate:'<b>%{label}</b><br>$%{value:,.0f}<br>%{percent}<extra></extra>'
-  }], { ...darkLayout, height:300, margin:{t:10,r:10,b:10,l:10} }, plotlyConfig);
+function renderRegPie(id,data,h=280){
+  if(!data||!data.length) return empty(id,'No regional data');
+  Plotly.newPlot(id,[{
+    type:'pie',labels:data.map(r=>r.region),values:data.map(r=>r.sales),
+    marker:{colors:C},textfont:{size:10},
+    hovertemplate:'<b>%{label}</b><br>$%{value:,.0f} (%{percent})<extra></extra>'
+  }],{...DARK,height:h,margin:{t:10,r:10,b:10,l:10}},PLY_CFG);
 }
 
-function renderInsights(insights) {
-  if (!insights.length) return;
-  document.getElementById('insights-grid').innerHTML = insights.map(i => `
-    <div class="insight-card">
-      <div class="insight-icon">${i.icon}</div>
-      <div class="insight-title">${i.title}</div>
-      <div class="insight-text">${i.text}</div>
+function renderHeatmap(id,data,h=320){
+  if(!data||!data.length) return empty(id,'No cross-analysis data');
+  const cats=[...new Set(data.map(r=>r.category))];
+  const regs=[...new Set(data.map(r=>r.region))];
+  const z=cats.map(cat=>regs.map(reg=>{
+    const match=data.find(r=>r.category===cat&&r.region===reg);
+    return match?match.sales:0;
+  }));
+  Plotly.newPlot(id,[{
+    type:'heatmap',z,x:regs,y:cats,
+    colorscale:[[0,'rgba(124,111,255,.05)'],[0.5,'rgba(124,111,255,.5)'],[1,'rgba(61,255,160,.9)']],
+    hovertemplate:'<b>%{y} × %{x}</b><br>$%{z:,.0f}<extra></extra>'
+  }],{...DARK,height:h,margin:{...DARK.margin,l:120,b:80}},PLY_CFG);
+}
+
+// ── Tables ────────────────────────────────────────────────────────────────────
+function renderTable(id, data, nameKey, ...valueKeys){
+  if(!data||!data.length){ document.getElementById(id).innerHTML=`<div class="empty"><div class="empty-i">📭</div></div>`; return }
+  const max=data[0][valueKeys[0]]||1;
+  const headers=[{k:nameKey,l:'Name'},...valueKeys.map(k=>({k,l:cap(k)}))];
+  document.getElementById(id).innerHTML=`
+  <table class="dt"><thead><tr><th>#</th>${headers.map(h=>`<th>${h.l}</th>`).join('')}</tr></thead>
+  <tbody>${data.slice(0,12).map((r,i)=>`
+    <tr>
+      <td><span class="rk ${i<3?'rk'+(i+1):'rkn'}">${i+1}</span></td>
+      <td>${shorten(String(r[nameKey]||''),30)}</td>
+      ${valueKeys.map((k,ki)=>{
+        const v=r[k]; if(v===undefined||v===null) return '<td>—</td>';
+        if(ki===0) return `<td><div class="mbar-wrap"><div class="mbar" style="width:${Math.max(3,(v/max)*90)}px"></div>${isNum(v)?fmt$(v):v}</div></td>`;
+        if(k==='profit') return `<td><span class="tag ${v>=0?'tag-g':'tag-r'}">${fmt$(v)}</span></td>`;
+        return `<td>${isNum(v)?fmt$(v):v}</td>`;
+      }).join('')}
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderCatTable(id, data){
+  if(!data||!data.length){ document.getElementById(id).innerHTML=''; return }
+  const max=data[0].sales||1;
+  document.getElementById(id).innerHTML=`
+  <table class="dt"><thead><tr><th>#</th><th>Category</th><th>Revenue</th><th>Profit</th><th>Orders</th></tr></thead>
+  <tbody>${data.map((r,i)=>`
+    <tr>
+      <td><span class="rk ${i<3?'rk'+(i+1):'rkn'}">${i+1}</span></td>
+      <td>${r.category}</td>
+      <td><div class="mbar-wrap"><div class="mbar" style="width:${Math.max(3,(r.sales/max)*80)}px"></div>${fmt$(r.sales)}</div></td>
+      <td>${r.profit!==undefined?`<span class="tag ${r.profit>=0?'tag-g':'tag-r'}">${fmt$(r.profit)}</span>`:'—'}</td>
+      <td>${r.orders||'—'}</td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+// ── Insights ──────────────────────────────────────────────────────────────────
+function renderInsights(ins){
+  if(!ins||!ins.length) return;
+  document.getElementById('ins-grid').innerHTML=ins.map(i=>`
+    <div class="ins-card">
+      <div class="ins-top">
+        <div class="ins-icon">${i.icon}</div>
+        <div class="ins-val">${i.value||''}</div>
+      </div>
+      <div class="ins-title">${i.title}</div>
+      <div class="ins-text">${i.text}</div>
     </div>`).join('');
 }
 
-function renderDatasetInfo(d) {
-  const k = d.kpis;
-  document.getElementById('dataset-info-wrap').innerHTML = `
-    <table class="data-table">
-      <tr><td style="color:var(--text-muted)">File</td><td>${d.filename}</td></tr>
-      <tr><td style="color:var(--text-muted)">Total Orders</td><td>${k.total_orders.toLocaleString()}</td></tr>
-      <tr><td style="color:var(--text-muted)">Revenue</td><td>${fmt$(k.total_revenue)}</td></tr>
-      <tr><td style="color:var(--text-muted)">Profit</td><td>${fmt$(k.total_profit)}</td></tr>
-      <tr><td style="color:var(--text-muted)">Margin</td><td>${k.profit_margin}%</td></tr>
-      <tr><td style="color:var(--text-muted)">Products</td><td>${k.unique_products}</td></tr>
-      <tr><td style="color:var(--text-muted)">Customers</td><td>${k.unique_customers}</td></tr>
-    </table>`;
+// ── Executive Summary ──────────────────────────────────────────────────────────
+function renderSummary(s){
+  if(!s){ document.getElementById('summary-content').innerHTML='<div class="empty"><div>No data</div></div>'; return }
+
+  const headline = s.headline.replace(/\$([\d,]+)/g,'<span style="color:var(--a1)">$$$1</span>')
+                              .replace(/(\d+\.\d+%)/g,'<span style="color:var(--a3)">$1</span>');
+
+  const finPts  = (s.financial?.points||[]).map(p=>mdBold(p));
+  const opsPts  = (s.operations?.points||[]).filter(Boolean).map(p=>mdBold(p));
+  const recs    = s.recommendations||[];
+  const colMap  = s.data_quality?.column_mapping||{};
+  const icons   = {date:'📅',sales:'💰',profit:'📊',quantity:'📦',product:'🏷️',
+                   category:'🗂️',region:'🌍',customer:'👥',order_id:'🔢',
+                   sub_category:'📁',discount:'🏷️',cost:'💸',ship_mode:'🚚'};
+
+  document.getElementById('summary-content').innerHTML=`
+  <div class="sum-hero">
+    <div style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--txt2);margin-bottom:10px">📋 EXECUTIVE SUMMARY</div>
+    <div class="sum-headline">${headline}</div>
+  </div>
+
+  <div class="sum-grid">
+    <div class="sum-card">
+      <div class="sum-card-title">💰 Financial Performance</div>
+      ${finPts.map(p=>`<div class="sum-point">${p}</div>`).join('')}
+    </div>
+    <div class="sum-card">
+      <div class="sum-card-title">⚙️ Operational Metrics</div>
+      ${opsPts.map(p=>`<div class="sum-point">${p}</div>`).join('')}
+    </div>
+  </div>
+
+  <div class="sum-grid">
+    <div class="sum-card">
+      <div class="sum-card-title">📅 Trend Analysis</div>
+      <div class="sum-point" style="padding:8px 0">${mdBold(s.trends?.text||'No trend data')}</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-card-title">🔍 Auto-Detected Columns (${s.data_quality?.total_columns_detected||0})</div>
+      <div class="col-map-wrap">
+        ${Object.entries(colMap).map(([f,c])=>`
+          <div class="col-map-item">${icons[f]||'•'} ${f} <span class="col-map-arrow">→</span> ${c}</div>
+        `).join('')}
+      </div>
+    </div>
+  </div>
+
+  <div class="sum-card" style="margin-bottom:18px">
+    <div class="sum-card-title">🚀 Strategic Recommendations</div>
+    <div style="margin-top:10px" class="rec-list">
+      ${recs.map((r,i)=>`<div class="rec-item"><div class="rec-num">${i+1}</div>${r}</div>`).join('')}
+    </div>
+  </div>`;
 }
 
-function emptyChart(id, msg = 'No data available') {
-  const el = document.getElementById(id);
-  if (el) el.innerHTML = `<div class="empty-state" style="padding:40px"><div class="empty-icon">📭</div><div>${msg}</div></div>`;
+function renderDsInfo(d){
+  const k=d.kpis;
+  document.getElementById('ds-info').innerHTML=`
+  <table class="dt">
+    <tr><td style="color:var(--txt3)">File</td><td>${d.filename}</td></tr>
+    <tr><td style="color:var(--txt3)">Orders</td><td>${k.total_orders.toLocaleString()}</td></tr>
+    <tr><td style="color:var(--txt3)">Revenue</td><td>${fmt$(k.total_revenue)}</td></tr>
+    <tr><td style="color:var(--txt3)">Profit</td><td>${fmt$(k.total_profit)}</td></tr>
+    <tr><td style="color:var(--txt3)">Margin</td><td>${k.profit_margin}%</td></tr>
+    <tr><td style="color:var(--txt3)">Customers</td><td>${k.unique_customers.toLocaleString()}</td></tr>
+    <tr><td style="color:var(--txt3)">Products</td><td>${k.unique_products.toLocaleString()}</td></tr>
+    <tr><td style="color:var(--txt3)">Columns Detected</td><td>${Object.values(d.col_map).filter(v=>v&&!v.startsWith('__')).length}</td></tr>
+  </table>`;
 }
 
-// ─── Utils ────────────────────────────────────────────────────────────────────
-function fmt$(v) {
-  if (v >= 1e6) return '$' + (v/1e6).toFixed(1) + 'M';
-  if (v >= 1e3) return '$' + (v/1e3).toFixed(1) + 'K';
-  return '$' + v.toFixed(0);
+// ── Utils ──────────────────────────────────────────────────────────────────────
+function fmt$(v){ v=parseFloat(v)||0; if(v>=1e6) return '$'+(v/1e6).toFixed(1)+'M'; if(v>=1e3) return '$'+(v/1e3).toFixed(1)+'K'; return '$'+v.toFixed(0) }
+function shorten(s,n){ return s&&s.length>n?s.slice(0,n)+'…':s }
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1).replace(/_/g,' ') }
+function isNum(v){ return typeof v==='number' }
+function mdBold(s){ return s.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>') }
+function empty(id,msg='No data available'){ const el=document.getElementById(id); if(el) el.innerHTML=`<div class="empty"><div class="empty-i">📭</div><div>${msg}</div></div>` }
+
+function toast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='show '+type;
+  setTimeout(()=>t.className='',3500);
 }
 
-function showToast(msg, type = 'success') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'show ' + type;
-  setTimeout(() => t.className = '', 3500);
-}
-
-async function downloadExcel() {
-  if (!analysisData) { showToast('⚠️ Upload a dataset first', 'error'); return; }
-  showToast('📊 Generating Excel report…', 'success');
-  window.location.href = '/download/excel';
+async function dlExcel(){
+  if(!D){ toast('⚠️ Upload a dataset first','err'); return }
+  toast('📊 Generating Excel report…','ok');
+  window.location.href='/download/excel';
 }
 </script>
 </body>
